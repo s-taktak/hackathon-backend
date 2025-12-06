@@ -4,8 +4,7 @@ WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt
 
-RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt && \
-    pip install --no-cache-dir uvicorn[standard]
+RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY ./api /code/api
 

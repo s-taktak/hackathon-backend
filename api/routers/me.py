@@ -20,7 +20,9 @@ async def get_my_profile(
     return current_user
 
 @router.get("/users/me/items",response_model=List[item_schema.ItemResponse])
-async def get_my_listings():
+async def get_my_listings(
+    current_user: Annotated[users_schema.User, Depends(get_current_user)],
+):
     return [
         item_schema.ItemResponse(
             id=uuid.uuid1(),

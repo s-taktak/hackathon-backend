@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get("/users/{user_id}",response_model=users_schema.UserResponse)
 async def get_user_profile(user_id:UUID):
-    return users_schema.UserResponse(id=user_id,userusername="佐藤",gender='male')
+    return users_schema.UserResponse(id=user_id,username="佐藤",gender='male')
 
 @router.get("/users/{user_id}/items",response_model=List[item_schema.ItemResponse])
 async def get_users_listings(user_id: UUID):
