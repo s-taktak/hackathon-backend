@@ -4,14 +4,12 @@ from uuid import UUID
 from typing import Optional
 import api.schemas.item as item_schema
 
-class HistoryCreate(BaseModel):
-    item_id: UUID
 
 class HistoryResponse(BaseModel):
     id: UUID
     user_id: UUID
     viewed_at: datetime
 
-    item: Optional[item_schema.ItemResponse] = None
+    item: Optional[item_schema.ItemSimpleResponse] = None
     class Config:
         from_attributes = True

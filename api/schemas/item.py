@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional,List
 
 from pydantic import BaseModel, Field
 from datetime import datetime
@@ -11,30 +11,61 @@ class ItemStatus(str,Enum):
     SOLD_OUT = 'sold_out'
     DRAFT = 'draft'
 
+class Brand(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+class Category(BaseModel):
+    id: int
+    name: str
+    depth: int
+
+
+    class Config:
+        from_attributes = True
+
+class Condition(BaseModel):
+    id: int
+    name: str
+    
+    class Config:
+        from_attributes = True
+
+class ImageResponse(BaseModel):
+    id: UUID
+    image_url: str
+    class Config:
+        from_attributes = True
 
 class ItemBase(BaseModel):
-    name: Optional[str] = Field(None,min_length=1, max_length=255,example="Nintendo Switch2")
+    title: Optional[str] = Field(None,min_length=1, max_length=255,example="Nintendo Switch2")
     price: int = Field(None,example=30000)
     description: Optional[str] = Field(None,example="これは今大人気のゲーム機です！")
-    category_id: int = Field(0, example=102)
-    brand_id: Optional[int] = Field(0, example=5)
-    condition_id: int = Field(0, example=1)
-
+    
 class ItemCreate(ItemBase):
-    pass
+    category_id: Optional[int] = Field(None, example=102)
+    brand_id: Optional[int] = Field(0, example=5)
+    condition_id: Optional[int] = Field(0, example=1)
 
 class ItemUpdate(BaseModel):
-    name: Optional[str] = None
-    price: Optional[int]= None
-    description: Optional[str] = None
-    category_id: Optional[int] = None
-    brand_id: Optional[int] = 2
-    status: Optional[ItemStatus] = None
+    title: Optional[str] = Field(None)
+    price: Optional[int]= Field(None,ge=0)
+    description: Optional[str] = Field(None)
+    category_id: Optional[int] = Field(None)
+    brand_id: Optional[int] = Field(None)
+    status: Optional[ItemStatus] = Field(None)
 
 class ItemResponse(ItemBase):
     id: UUID
     seller: user_schema.UserResponse
     status: ItemStatus
+    brand: Optional[Brand] = None 
+    category: Optional[Category] = None
+    condition: Optional[Condition] = None  
+    images: List[ImageResponse] = []
     created_at: datetime
     updated_at: datetime
 
@@ -43,3 +74,11 @@ class ItemResponse(ItemBase):
     class Config:
         from_attributes = True
 
+class ItemSimpleResponse(BaseModel):
+    id: UUID
+    title: str
+    price: int
+    status: str
+
+    class Config:
+        from_attributes = True

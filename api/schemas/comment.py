@@ -12,8 +12,8 @@ class CommentCreate(CommentBase):
     pass
 
 class CommentResponse(CommentBase):
-    comment_id : UUID
-    item: item_schema.ItemResponse
+    id : UUID
+    item_id: UUID
     user: user_schema.UserResponse
     created_at: datetime
 
