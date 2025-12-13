@@ -43,4 +43,3 @@ pymysql
 torch
 transformers
 numpy
-qdrant-client
