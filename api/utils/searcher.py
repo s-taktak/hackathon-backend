@@ -1,15 +1,12 @@
 import torch
 import numpy as np
 import pickle
-from qdrant_client import QdrantClient
-from qdrant_client.http import models as qmodels
 from pathlib import Path
 from transformers import AutoTokenizer, AutoModel
 import torch.nn as nn
 from api.utils.two_tower_model import TwoTowerModel
 
 # --- 設定 ---
-QDRANT_HOST = "qdrant" 
 COLLECTION_NAME = "mercari_items"
 EMBEDDING_DIM = 128
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -51,11 +48,6 @@ class CustomUnpickler(pickle.Unpickler):
 # --- 検索エンジンクラス ---
 class VectorSearchEngine:
     def __init__(self, model_path: str, encoders_path: str):
-        try:
-            self.client = QdrantClient(host=QDRANT_HOST, port=6333)
-        except:
-            self.client = None
-            print("⚠️ Qdrant connection failed.")
 
         self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
         self.model = None
