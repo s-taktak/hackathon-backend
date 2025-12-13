@@ -43,7 +43,10 @@ app.include_router(users.router)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",      # ローカル開発用
+        "https://my-app.vercel.app",  # 本番フロントエンド用
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
