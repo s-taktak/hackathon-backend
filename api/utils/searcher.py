@@ -32,6 +32,11 @@ class SafeLabelEncoder:
         # 辞書にないものは 0 (Unknown) に変換する
         return np.array([self.vocab.get(str(v), self.unknown_idx) for v in values])
     
+try:
+    import uvicorn.__main__
+    setattr(uvicorn.__main__, 'SafeLabelEncoder', SafeLabelEncoder)
+except (ImportError, AttributeError):
+    pass # uvicorn以外で動いているときは無視
 
 # --- 3. カスタムUnpickler (念のための保険) ---
 class CustomUnpickler(pickle.Unpickler):
