@@ -39,6 +39,7 @@ websockets==15.0.1
 sqlalchemy
 aiomysql
 pymysql
+--extra-index-url https://download.pytorch.org/whl/cpu
 torch
 transformers
 numpy
