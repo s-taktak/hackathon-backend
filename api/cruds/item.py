@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select,desc
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from typing import List
@@ -15,6 +15,22 @@ import torch
 from uuid import UUID
 import uuid
 from datetime import datetime
+
+async def get_items_list(db: AsyncSession, skip:int, limit: int):
+    result = await db.execute(
+        select(ItemModel)
+        .options(
+            selectinload(ItemModel.seller),
+            selectinload(ItemModel.category),
+            selectinload(ItemModel.brand),       # ブランド情報
+            selectinload(ItemModel.condition),
+            selectinload(ItemModel.images),
+            )
+        .order_by(desc(ItemModel.updated_at))
+        )
+    
+    return result.scalars().all()
+
 
 async def get_item(db: AsyncSession, item_id: str) -> ItemModel | None:
     result = await db.execute(
@@ -45,6 +61,7 @@ async def get_items_by_ids(db: AsyncSession, item_ids: List[str]) -> List[ItemMo
             selectinload(ItemModel.images),
         )
         .filter(ItemModel.id.in_(item_ids)) # ★重要: IN句を使う
+        .order_by(desc(ItemModel.updated_at))
     )
     return result.scalars().all()
 
@@ -56,10 +73,36 @@ async def get_items_by_user_id(db: AsyncSession, user_id: str) -> List[ItemModel
             selectinload(ItemModel.category),
             selectinload(ItemModel.brand),       # ブランド情報
             selectinload(ItemModel.condition),
+            selectinload(ItemModel.images),
             )
         .filter(ItemModel.seller_id == user_id)
+        .order_by(desc(ItemModel.updated_at))
     )
     return result.scalars().all()
+
+async def get_items_by_ids(db: AsyncSession, item_ids: List[str]):
+    """IDリストから商品詳細情報を取得し、元のID順に並べて返す"""
+    if not item_ids:
+        return []
+
+    result = await db.execute(
+        select(ItemModel)
+        .options(
+            selectinload(ItemModel.seller),
+            selectinload(ItemModel.category),
+            selectinload(ItemModel.brand),
+            selectinload(ItemModel.condition),
+            selectinload(ItemModel.images)
+        )
+        .filter(ItemModel.id.in_(item_ids))
+    )
+    items = result.scalars().all()
+    
+    # DB取得順はバラバラなので、指定されたID順に並べ直す
+    items_map = {item.id: item for item in items}
+    sorted_items = [items_map[id] for id in item_ids if id in items_map]
+    
+    return sorted_items
 
 async def delete_item(db: AsyncSession, original: ItemModel) -> None:
     await db.delete(original)
@@ -155,51 +198,11 @@ async def update_item(
 
 # api/cruds/item.py
 
-async def search_items_by_vector(
-    db: AsyncSession, 
-    query_vector: list[float],
-    top_k: int = 20
-) -> List[ItemModel]:
-    
-    # 1. ベクトルテーブルだけを全件取得（軽い！）
-    # select(ItemVector.item_id, ItemVector.embedding)
+async def get_all_vectors(db: AsyncSession):
+    """全商品のベクトルを取得する（計算はしない）"""
     result = await db.execute(select(ItemVector))
-    rows = result.scalars().all()
+    return result.scalars().all()
 
-    if not rows:
-        return []
-
-    # 2. 計算 (Pythonメモリ上)
-    db_vectors = [row.embedding for row in rows]
-    db_ids = [row.item_id for row in rows] # item_idを取り出す
-
-    # [N, 128] の行列にする
-    tensor_db = torch.tensor(db_vectors) 
-    tensor_query = torch.tensor(query_vector).unsqueeze(0) # [1, 128]
-
-    # 3. コサイン類似度計算 (一括計算なので速い)
-    # 正規化されている前提なら内積(matmul)でOK
-    # 正規化されていないなら F.cosine_similarity を使う
-    scores = torch.matmul(tensor_query, tensor_db.T).squeeze(0)
-
-    # 4. 上位K件を取得
-    # スコアが高い順にインデックスを取得
-    top_k = min(top_k, len(db_ids))
-    top_scores, top_indices = torch.topk(scores, k=top_k)
-
-    # 3. ヒットしたIDの商品情報を取得
-    target_ids = [db_ids[i] for i in top_indices.cpu().numpy()]
-    
-    items = await get_item(db, target_ids)
-    # 7. ★重要: 検索スコア順(target_idsの順)に並べ直す
-    # DBからの取得順は保証されないため、Python側で並べ替えが必要
-    item_map = {item.id: item for item in items}
-    sorted_items = []
-    for tid in target_ids:
-        if tid in item_map:
-            sorted_items.append(item_map[tid])
-            
-    return sorted_items
 
 async def purchase_item(
     db: AsyncSession, 

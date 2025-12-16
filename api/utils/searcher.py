@@ -5,6 +5,7 @@ from pathlib import Path
 from transformers import AutoTokenizer, AutoModel
 import torch.nn as nn
 from api.utils.two_tower_model import TwoTowerModel
+import json
 
 # --- 設定 ---
 COLLECTION_NAME = "mercari_items"
@@ -48,27 +49,19 @@ class CustomUnpickler(pickle.Unpickler):
 # --- 検索エンジンクラス ---
 class VectorSearchEngine:
     def __init__(self, model_path: str, encoders_path: str):
-
-        self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+        self.client = None # Qdrantは使わないのでNone
         self.model = None
         self.encoders = None
+        self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
         
-        # モデル読み込み
         try:
             self._load_resources(model_path, encoders_path)
         except Exception as e:
             print(f"⚠️ Model load failed detail: {e}")
             raise e 
-        
-        if self.client:
-            try:
-                self._init_collection()
-            except Exception as e:
-                print(f"⚠️ Qdrant init failed: {e}")
 
     def _load_resources(self, model_path, encoders_path):
         print(f"📂 Loading model from {model_path}...")
-        
         with open(encoders_path, 'rb') as f:
             data_pack = CustomUnpickler(f).load()
             self.encoders = data_pack['encoders']
@@ -79,41 +72,19 @@ class VectorSearchEngine:
         self.model.eval()
         print("✅ Model loaded successfully.")
 
-    def _init_collection(self):
-        try:
-            collections = self.client.get_collections()
-            exists = any(c.name == COLLECTION_NAME for c in collections.collections)
-            if not exists:
-                self.client.create_collection(
-                    collection_name=COLLECTION_NAME,
-                    vectors_config=qmodels.VectorParams(
-                        size=EMBEDDING_DIM,
-                        distance=qmodels.Distance.COSINE
-                    )
-                )
-                print(f"✅ Collection '{COLLECTION_NAME}' created.")
-        except Exception as e:
-            print(f"⚠️ Failed to init collection: {e}")
+    # _init_collection は削除
 
     def encode_single_item(self, item_dict: dict) -> list:
-        if not self.model:
-            print("⚠️ Model is not loaded.")
-            return []
-        
+        # ベクトル生成ロジックはそのまま
+        if not self.model: return []
         self.model.eval()
         with torch.no_grad():
             try:
-                # IDを文字列に変換 (Noneは '0' に)
-                def safe_str_id(val):
-                    if val is None: return '0'
-                    return str(val)
-
+                def safe_str_id(val): return '0' if val is None else str(val)
                 b_id = safe_str_id(item_dict.get('brand_id'))
                 c_id = safe_str_id(item_dict.get('category_id'))
                 cond_id = safe_str_id(item_dict.get('condition_id'))
 
-                # SafeLabelEncoderなら未知の値でもエラーにならず 0 が返る
-                # リスト形式で渡して [0] を取り出す
                 brand_val = self.encoders['brand_id'].transform([b_id])[0]
                 cat_val = self.encoders['c2_id'].transform([c_id])[0]
                 cond_val = self.encoders['item_condition_id'].transform([cond_id])[0]
@@ -124,184 +95,69 @@ class VectorSearchEngine:
                 cat = torch.tensor([cat_val], dtype=torch.long).to(DEVICE)
                 cond = torch.tensor([cond_val], dtype=torch.long).to(DEVICE)
 
-                inputs = self.tokenizer(
-                    item_dict.get('title', ''), 
-                    padding='max_length', truncation=True, max_length=32, return_tensors='pt'
-                ).to(DEVICE)
+                inputs = self.tokenizer(item_dict.get('title', ''), padding='max_length', truncation=True, max_length=32, return_tensors='pt').to(DEVICE)
 
                 vector = self.model.forward_one_tower(
                     inputs['input_ids'], inputs['attention_mask'],
                     price, brand, cat, cond
                 )
-                
-                print(f"✅ Vector created for: {item_dict.get('title')[:10]}...")
                 return vector.cpu().numpy()[0].tolist()
-
             except Exception as e:
-                import traceback
                 print(f"❌ Vector encoding failed: {e}")
-                print(traceback.format_exc())
                 return []
 
     def encode_query(self, query_text: str) -> list:
         if not self.model: return []
-
         self.model.eval()
         with torch.no_grad():
             try:
-                inputs = self.tokenizer(
-                    query_text, 
-                    padding='max_length', truncation=True, max_length=32, return_tensors='pt'
-                ).to(DEVICE)
-
+                inputs = self.tokenizer(query_text, padding='max_length', truncation=True, max_length=32, return_tensors='pt').to(DEVICE)
                 dummy_price = torch.tensor([np.log1p(3000.0)], dtype=torch.float).to(DEVICE)
                 dummy_id = torch.tensor([0], dtype=torch.long).to(DEVICE)
-
                 vector = self.model.forward_one_tower(
-                    inputs['input_ids'], 
-                    inputs['attention_mask'],
+                    inputs['input_ids'], inputs['attention_mask'],
                     dummy_price, dummy_id, dummy_id, dummy_id
                 )
-                
                 return vector.cpu().numpy()[0].tolist()
-
             except Exception as e:
                 print(f"❌ Query encoding failed: {e}")
                 return []
-        
-    def encode_query(self, query_text: str) -> list[float]:
+            
+    def sort_by_similarity(self, query_vector: list, all_vectors_data: list, top_k: int = 20) -> list:
         """
-        検索キーワードをベクトルに変換して返す
-        （カテゴリや価格は不明なので、ダミー値を入れて推論する）
+        全ベクトルデータを受け取り、類似度が高い順にIDのリストを返す
+        query_vector: 検索したいベクトル (list of float)
+        all_vectors_data: ItemVectorモデルのリスト
         """
-        self.model.eval()
-        with torch.no_grad():
-            try:
-                # テキストのトークナイズ
-                inputs = self.tokenizer(
-                    query_text, 
-                    padding='max_length', truncation=True, max_length=32, return_tensors='pt'
-                ).to(DEVICE)
-
-                # ダミーデータの作成
-                # 検索クエリには「価格」や「ブランド」の概念がないため、
-                # モデルが混乱しないよう「0 (Unknown)」や「平均的な値」を入れます
-                dummy_price = torch.tensor([np.log1p(3000.0)], dtype=torch.float).to(DEVICE) # 仮の価格
-                dummy_id = torch.tensor([0], dtype=torch.long).to(DEVICE) # Unknown ID
-
-                # 推論 (forward_one_tower)
-                vector = self.model.forward_one_tower(
-                    inputs['input_ids'], 
-                    inputs['attention_mask'],
-                    dummy_price, # price
-                    dummy_id,    # brand
-                    dummy_id,    # category
-                    dummy_id     # condition
-                )
-                
-                # Pythonのリストに変換して返す ([0.123, ...])
-                return vector.cpu().numpy()[0].tolist()
-
-            except Exception as e:
-                print(f"❌ Query encoding failed: {e}")
-                return []
-        
-    def create_index(self, items: list[dict]):
-        """
-        全商品をベクトル化して保存する
-        items: [{"id": "uuid", "title": "name", "price": 1000, ...}, ...] のリスト
-        """
-        print(f"🔄 {len(items)}件のインデックスを作成中...")
-        vectors = []
-        ids = []
-        
-        with torch.no_grad():
-            for item in items:
-                try:
-                    # ID変換 (未知の値は0番=Unknownに変換)
-                    # DBから来る値は文字列やIntが混ざる可能性があるので str() で統一
-                    b_id = str(item.get('brand_id', '0'))
-                    c_id = str(item.get('category_id', '0')) # DBのカラム名に合わせて調整
-                    cond_id = str(item.get('condition_id', '0'))
-
-                    brand_val = self.encoders['brand_id'].transform([b_id])[0]
-                    cat_val = self.encoders['c2_id'].transform([c_id])[0] # 学習時のキー名 'c2_id' に合わせる
-                    cond_val = self.encoders['item_condition_id'].transform([cond_id])[0]
-
-                    # Tensor化
-                    price = torch.tensor([np.log1p(float(item.get('price', 0)))], dtype=torch.float).to(DEVICE)
-                    brand = torch.tensor([brand_val], dtype=torch.long).to(DEVICE)
-                    cat = torch.tensor([cat_val], dtype=torch.long).to(DEVICE)
-                    cond = torch.tensor([cond_val], dtype=torch.long).to(DEVICE)
-
-                    # テキスト処理
-                    inputs = self.tokenizer(
-                        item.get('title', ''), 
-                        padding='max_length', truncation=True, max_length=32, return_tensors='pt'
-                    ).to(DEVICE)
-
-                    # ベクトル生成
-                    vec = self.model.forward_one_tower(
-                        inputs['input_ids'], inputs['attention_mask'],
-                        price, brand, cat, cond
-                    )
-                    vectors.append(vec.cpu())
-                    ids.append(str(item['id']))
-                    
-                except Exception as e:
-                    print(f"Skipping item {item.get('id')}: {e}")
-                    continue
-
-        if not vectors:
-            print("⚠️ ベクトル化できるアイテムがありませんでした")
-            return
-
-        # 結合して保存
-        self.index_vectors = torch.cat(vectors)
-        self.index_ids = ids
-        
-        with open(self.index_path, 'wb') as f:
-            pickle.dump({'vectors': self.index_vectors, 'ids': self.index_ids}, f)
-        print("✅ インデックス作成完了")
-
-    def load_index(self):
-        """保存されたインデックスをメモリに読み込む"""
-        if not self.index_path.exists():
-            return
-        
-        with open(self.index_path, 'rb') as f:
-            data = pickle.load(f)
-            self.index_vectors = data['vectors'].to(DEVICE)
-            self.index_ids = data['ids']
-        print(f"✅ インデックス読込完了: {len(self.index_ids)}件")
-
-    def search(self, query: str, top_k: int = 10):
-        """検索を実行する"""
-        if self.index_vectors is None:
+        if not all_vectors_data:
             return []
 
-        # クエリのベクトル化 (価格などはダミー値を入れる)
-        with torch.no_grad():
-            inputs = self.tokenizer(
-                query, padding='max_length', truncation=True, max_length=32, return_tensors='pt'
-            ).to(DEVICE)
-            
-            # 検索クエリには「条件」がないので全て0(Unknown)や平均値を入れる
-            dummy_price = torch.tensor([np.log1p(3000.0)], dtype=torch.float).to(DEVICE) # 仮の平均価格
-            dummy_id = torch.tensor([0], dtype=torch.long).to(DEVICE)
+        scores = []
+        query_vec_np = np.array(query_vector)
+        query_norm = np.linalg.norm(query_vec_np)
 
-            query_vec = self.model.forward_one_tower(
-                inputs['input_ids'], inputs['attention_mask'],
-                dummy_price, dummy_id, dummy_id, dummy_id
-            )
+        for v_obj in all_vectors_data:
+            try:
+                # DBの文字列型ベクトルをリストに戻す
+                if isinstance(v_obj.embedding, str):
+                    vec = np.array(json.loads(v_obj.embedding))
+                else:
+                    vec = np.array(v_obj.embedding)
+                
+                vec_norm = np.linalg.norm(vec)
+                
+                if query_norm == 0 or vec_norm == 0:
+                    score = 0
+                else:
+                    # コサイン類似度計算
+                    score = np.dot(query_vec_np, vec) / (query_norm * vec_norm)
+                
+                scores.append((v_obj.item_id, score))
+            except Exception as e:
+                continue
 
-        # 類似度計算 (コサイン類似度)
-        scores = torch.matmul(query_vec, self.index_vectors.T).squeeze(0)
+        # スコア順にソート
+        scores.sort(key=lambda x: x[1], reverse=True)
         
-        # 上位取得
-        k = min(top_k, len(self.index_ids))
-        top_scores, top_indices = torch.topk(scores, k=k)
-        
-        # IDリストを返す
-        results = [self.index_ids[i] for i in top_indices.cpu().numpy()]
-        return results
+        # 上位K件のIDだけを返す
+        return [item_id for item_id, score in scores[:top_k]]

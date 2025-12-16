@@ -1,5 +1,5 @@
 from fastapi import APIRouter,Depends, HTTPException,status
-from typing import Annotated
+from typing import Annotated,List
 import api.schemas.item as item_schema
 import api.cruds.item as item_crud
 import api.schemas.users as users_schema
@@ -41,6 +41,16 @@ async def update_item(
     updated_item = await item_crud.update_item(db,str(item_id),item_body)
     
     return updated_item
+
+@router.get("/item",response_model=List[item_schema.ItemResponse])
+async def get_items(
+    skip: int = 0,
+    limit: int = 20,
+    db: AsyncSession = Depends(get_db)
+    ):
+    item = await item_crud.get_items_list(db,skip,limit)
+    
+    return item
 
 @router.get("/item/{item_id}",response_model=item_schema.ItemResponse)
 async def get_item_detail(
