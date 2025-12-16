@@ -70,7 +70,7 @@ async def get_current_user(
         raise credentials_exception
     return user
 
-@router.post("/auth/signup",response_model = UserSchema.UserMeResponse)
+@router.post("/auth/signup",response_model = UserSchema.UserMeResponse,operation_id="signUp",tags=["Auth"])
 async def register_user(
     user_in: UserSchema.UserCreate,
     db: AsyncSession = Depends(get_db)
@@ -84,7 +84,7 @@ async def register_user(
 
     return new_user
 
-@router.post("/auth/login",response_model=Token,operation_id="login")
+@router.post("/auth/login",response_model=Token,operation_id="login",tags=["Auth"])
 async def login(
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: AsyncSession = Depends(get_db)

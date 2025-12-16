@@ -16,7 +16,7 @@ from api.db import get_db
 
 router = APIRouter()
 
-@router.post("/item/{item_id}/comments",response_model=comment_schema.CommentResponse)
+@router.post("/item/{item_id}/comments",response_model=comment_schema.CommentResponse,operation_id="postComment", tags=["Comment"])
 async def post_comment(
     item_id:UUID,
     comment_body:comment_schema.CommentCreate,
@@ -25,7 +25,7 @@ async def post_comment(
     ):
     return await comment_crud.create_comment(db, comment_body, str(item_id), str(current_user.id))
 
-@router.delete("/comments/{comment_id}", response_model=None)
+@router.delete("/comments/{comment_id}", response_model=None,operation_id="deleteComment", tags=["Comment"])
 async def delete_comment(
     comment_id: UUID,
     current_user: Annotated[users_schema.UserMeResponse, Depends(get_current_user)],
@@ -50,7 +50,7 @@ async def delete_comment(
     await comment_crud.delete_comment(db, original=comment)
     return
 
-@router.get("/item/{item_id}/comments", response_model=List[comment_schema.CommentResponse])
+@router.get("/item/{item_id}/comments", response_model=List[comment_schema.CommentResponse],operation_id="getComment", tags=["Comment"])
 async def get_comments(
     item_id: UUID,
     db: AsyncSession = Depends(get_db)

@@ -9,7 +9,7 @@ import api.core as core
 
 router = APIRouter()
 
-@router.get("/search", response_model=List[item_schema.ItemResponse], tags=["Search"])
+@router.get("/search", response_model=List[item_schema.ItemResponse],operation_id="search", tags=["Search"])
 async def search_items(
     q: str = Query(..., min_length=1, max_length=100, description="検索キーワード"),
     db: AsyncSession = Depends(get_db)

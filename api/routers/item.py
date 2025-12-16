@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
 
-@router.post("/item",response_model=item_schema.ItemResponse)
+@router.post("/item",response_model=item_schema.ItemResponse,operation_id="postItem", tags=["Item"])
 async def post_item(
     item_body: item_schema.ItemCreate,
     current_user: Annotated[users_schema.UserMeResponse, Depends(get_current_user)],
@@ -21,7 +21,7 @@ async def post_item(
     item = await item_crud.create_item(db,item_body,str(current_user.id))
     return item
 
-@router.put("/item/{item_id}",response_model=item_schema.ItemResponse)
+@router.put("/item/{item_id}",response_model=item_schema.ItemResponse,operation_id="updateItem", tags=["Item"])
 async def update_item(
     item_id: UUID,
     item_body: item_schema.ItemUpdate,
@@ -42,8 +42,8 @@ async def update_item(
     
     return updated_item
 
-@router.get("/item",response_model=List[item_schema.ItemResponse])
-async def get_items(
+@router.get("/item",response_model=List[item_schema.ItemResponse],operation_id="getItemsList", tags=["Item"])
+async def get_items_list(
     skip: int = 0,
     limit: int = 20,
     db: AsyncSession = Depends(get_db)
@@ -52,7 +52,7 @@ async def get_items(
     
     return item
 
-@router.get("/item/{item_id}",response_model=item_schema.ItemResponse)
+@router.get("/item/{item_id}",response_model=item_schema.ItemResponse,operation_id="getItemDetail", tags=["Item"])
 async def get_item_detail(
     item_id: UUID,
     db: AsyncSession = Depends(get_db)
@@ -63,7 +63,7 @@ async def get_item_detail(
         raise HTTPException(status_code=404, detail="Item not found")
     return item
 
-@router.delete("/item/{item_id}",response_model=None)
+@router.delete("/item/{item_id}",response_model=None,operation_id="deleteItem", tags=["Item"])
 async def delete_item(
     item_id:UUID,
     db: AsyncSession = Depends(get_db),
@@ -75,7 +75,7 @@ async def delete_item(
     await item_crud.delete_item(db, original=item)
     return
 
-@router.post("/item/{item_id}/purchase",response_model=item_schema.ItemResponse)
+@router.post("/item/{item_id}/purchase",response_model=item_schema.ItemResponse,operation_id="purchaseItem", tags=["Item"])
 async def purchase_item(
     item_id: UUID,
     current_user: Annotated[users_schema.UserMeResponse, Depends(get_current_user)],

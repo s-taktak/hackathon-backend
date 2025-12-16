@@ -132,6 +132,7 @@ async def create_item(
         updated_at=current_time
     )
 
+
     embedding_list = None
     if core.search_engine is None:
         print("❌ ERROR: core.search_engine is None! (main.pyのlifespanが動いていないか、初期化に失敗しています)")
@@ -179,21 +180,87 @@ async def create_item(
 async def update_item(
     db: AsyncSession, item_id: str, item_update: ItemUpdate
 ) -> ItemModel | None:
+    VECTOR_FIELDS = [
+    "title", 
+    "description", 
+    "price", 
+    "category_id", 
+    "brand_id", 
+    "condition_id"
+]
     item = await get_item(db, item_id)
     if item is None:
         return None
 
     update_data = item_update.model_dump(exclude_unset=True)
 
+    item_was_modified = False
+    
+    # 変更フラグをチェックするためのセット
+    vector_fields_modified = False
+
     for key, value in update_data.items():
+        # ベクトル生成に関わるフィールドが変更されたかチェック
+        if key in VECTOR_FIELDS and getattr(item, key) != value:
+            vector_fields_modified = True
+            
+        # モデルの属性を更新
         setattr(item, key, value)
 
     item.updated_at = datetime.now()
+    
+    # --- ★ベクトル更新ロジックの追加★ ---
+    if vector_fields_modified and core.search_engine:
+        print(f"🔄 Vector update triggered for item ID: {item_id}")
+        
+        # 1. 新しいベクトル生成に必要な情報を準備
+        item_dict = {
+            "title": item.title,
+            "price": item.price,
+            "brand_id": item.brand_id,
+            "category_id": item.category_id,
+            "condition_id": item.condition_id
+        }
+        
+        try:
+            # 2. ベクトルを再生成
+            new_embedding_list = core.search_engine.encode_single_item(item_dict)
+            
+            if new_embedding_list:
+                print("✅ New vector generated. Updating DB.")
+                
+                # 3. 既存の ItemVector レコードを取得・更新（または新規作成）
+                # ItemModel.vector リレーションシップが定義されている前提
+                # ItemVectorテーブルからitem_idで検索
+                existing_vector = await db.execute(
+                    select(ItemVector).filter(ItemVector.item_id == item_id)
+                )
+                current_vector = existing_vector.scalars().first()
+                
+                if current_vector:
+                    # 更新
+                    current_vector.embedding = new_embedding_list
+                    db.add(current_vector)
+                else:
+                    # 万が一、ベクトルが登録されていなかった場合（新規作成）
+                    new_vector = ItemVector(
+                        item_id=item_id, 
+                        embedding=new_embedding_list
+                    )
+                    db.add(new_vector)
+            else:
+                 print("⚠️ New vector generation failed (empty list returned). Skipping vector update.")
 
+        except Exception as e:
+            print(f"❌ Vector re-encoding failed during update: {e}")
+            # ベクトル更新に失敗しても、アイテム自体の更新は続ける
+
+    # --- DBへの書き込み ---
     db.add(item)
     await db.commit()
     await db.refresh(item)
 
+    # selectinload 付きで再取得
     return await get_item(db, item_id)
 
 # api/cruds/item.py

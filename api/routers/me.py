@@ -16,27 +16,27 @@ from typing import Annotated
 
 router = APIRouter()
 
-@router.get("/users/me",response_model=users_schema.UserMeResponse)
+@router.get("/users/me",response_model=users_schema.UserMeResponse,operation_id="getMyProfile", tags=["Me"])
 async def get_my_profile(
     current_user: Annotated[users_schema.UserMeResponse, Depends(get_current_user)],
 ): 
     return current_user
 
-@router.get("/users/me/items", response_model=List[item_schema.ItemResponse])
+@router.get("/users/me/items", response_model=List[item_schema.ItemResponse],operation_id="getMyListing", tags=["Me"])
 async def get_my_listings(
     current_user: Annotated[users_schema.UserResponse, Depends(get_current_user)],
     db: AsyncSession = Depends(get_db),
 ):
     return await item_crud.get_items_by_user_id(db, str(current_user.id))
 
-@router.get("/users/me/history", response_model=List[history_schema.HistoryResponse])
+@router.get("/users/me/history", response_model=List[history_schema.HistoryResponse],operation_id="getHistory", tags=["Me"])
 async def get_browsing_history(
     current_user: Annotated[users_schema.UserResponse, Depends(get_current_user)],
     db: AsyncSession = Depends(get_db),
 ):
     return await history_crud.get_my_history(db, str(current_user.id))
 
-@router.post("/history/{item_id}", response_model=None)
+@router.post("/history/{item_id}", response_model=None,operation_id="postHistory", tags=["Me"])
 async def record_browsing_history(
     item_id: UUID,
     current_user: Annotated[users_schema.UserResponse, Depends(get_current_user)],

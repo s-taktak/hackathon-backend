@@ -12,7 +12,7 @@ from datetime import datetime
 
 router = APIRouter()
 
-@router.get("/users/{user_id}",response_model=users_schema.UserResponse)
+@router.get("/users/{user_id}",response_model=users_schema.UserResponse,operation_id="getProfile", tags=["User"])
 async def get_user_profile(
     user_id:UUID,
     db: AsyncSession = Depends(get_db)
@@ -26,7 +26,7 @@ async def get_user_profile(
         )
     return user
 
-@router.get("/users/{user_id}/items",response_model=List[item_schema.ItemResponse])
+@router.get("/users/{user_id}/items",response_model=List[item_schema.ItemResponse],operation_id="getListing", tags=["User"])
 async def get_users_listings(
     user_id: UUID,
     db: AsyncSession = Depends(get_db)
