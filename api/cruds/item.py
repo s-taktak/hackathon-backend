@@ -279,6 +279,14 @@ async def get_all_vectors(db: AsyncSession):
     result = await db.execute(select(ItemVector))
     return result.scalars().all()
 
+async def get_vector_by_id(db: AsyncSession,item_id:str):
+    result = await db.execute(
+        select(ItemVector)
+        .filter(ItemVector.item_id == item_id)
+        )
+    
+    return result.scalars().all()
+
 
 async def purchase_item(
     db: AsyncSession, 

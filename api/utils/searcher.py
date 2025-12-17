@@ -123,17 +123,17 @@ class VectorSearchEngine:
                 print(f"❌ Query encoding failed: {e}")
                 return []
             
-    def sort_by_similarity(self, query_vector: list, all_vectors_data: list, top_k: int = 20) -> list:
+    def sort_by_similarity(self, vector: list, all_vectors_data: list, top_k: int = 20) -> list:
         """
         全ベクトルデータを受け取り、類似度が高い順にIDのリストを返す
-        query_vector: 検索したいベクトル (list of float)
+        vector: 検索したいベクトル (list of float)
         all_vectors_data: ItemVectorモデルのリスト
         """
         if not all_vectors_data:
             return []
 
         scores = []
-        query_vec_np = np.array(query_vector)
+        query_vec_np = np.array(vector)
         query_norm = np.linalg.norm(query_vec_np)
 
         for v_obj in all_vectors_data:

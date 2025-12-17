@@ -10,34 +10,25 @@ from uuid import UUID
 
 router = APIRouter()
 
-@router.get("/recommend", response_model=List[item_schema.ItemResponse],operation_id="search", tags=["Search"])
+@router.get("/recommend", response_model=List[item_schema.ItemResponse],operation_id="recommend", tags=["recommend"])
 async def recommend_items(
     item_id: UUID,
-    q: str = Query(..., min_length=1, max_length=100, description="検索キーワード"),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    AIベクトル検索を行うエンドポイント
-    """
-    # 1. 検索エンジンが準備できているか確認
     if not core.search_engine:
         # 準備できていない場合はエラーではなく空リストを返す（または503エラー）
         print("⚠️ Search engine is not loaded.")
         return []
 
-    # 2. キーワードをベクトルに変換 (Pythonリスト)
-    query_vector = core.search_engine.encode_query(q)
-    
-    if not query_vector:
-        return []
+    item_vector = await item_crud.get_vector_by_id(db,str(item_id))
 
     # 3. MySQLからベクトル検索を実行 (CRUD呼び出し)
     # ここで「全件スキャン＆類似度計算」が走ります
     all_vectors = await item_crud.get_all_vectors(db)
-    top_item_ids = core.search_engine.sort_by_similarity(query_vector, all_vectors)
+    top_item_ids = core.search_engine.sort_by_similarity(item_vector, all_vectors)
     if not top_item_ids:
         return []
 
-    items = await item_crud.get_items_by_ids(db, top_item_ids)
+    items = await item_crud.get_items_by_ids(db, top_item_ids[1:],top_k=3)
 
     return items
