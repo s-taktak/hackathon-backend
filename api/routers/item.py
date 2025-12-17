@@ -1,4 +1,5 @@
-from fastapi import APIRouter,Depends, HTTPException,status
+import os
+from fastapi import APIRouter,Depends, HTTPException,status,File, UploadFile, Form
 from typing import Annotated,List
 import api.schemas.item as item_schema
 import api.cruds.item as item_crud
@@ -9,6 +10,9 @@ from uuid import UUID
 from datetime import datetime
 from api.db import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
+from google.cloud import storage
+
+BUCKET_NAME = "uttc-image"
 
 router = APIRouter()
 
@@ -16,9 +20,33 @@ router = APIRouter()
 async def post_item(
     item_body: item_schema.ItemCreate,
     current_user: Annotated[users_schema.UserMeResponse, Depends(get_current_user)],
+    files: List[UploadFile] = File(default=[]),
     db: AsyncSession= Depends(get_db)
     ):
-    item = await item_crud.create_item(db,item_body,str(current_user.id))
+    image_urls = []
+    
+    if files:
+        try:
+            storage_client = storage.Client()
+            bucket = storage_client.bucket(BUCKET_NAME)
+
+            for file in files:
+                extension = os.path.splitext(file.filename)[1]
+                filename = f"{uuid.uuid4()}{extension}"
+                blob = bucket.blob(filename)
+                
+                # アップロード
+                blob.upload_from_file(file.file, content_type=file.content_type)
+                
+                # URLをリストに追加
+                url = f"https://storage.googleapis.com/{BUCKET_NAME}/{filename}"
+                image_urls.append(url)
+                
+        except Exception as e:
+            print(f"GCS Upload Error: {e}")
+            raise HTTPException(status_code=500, detail="画像のアップロードに失敗しました")
+
+    item = await item_crud.create_item(db,item_body,str(current_user.id),image_urls=image_urls)
     return item
 
 @router.put("/item/{item_id}",response_model=item_schema.ItemResponse,operation_id="updateItem", tags=["Item"])

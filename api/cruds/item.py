@@ -110,7 +110,7 @@ async def delete_item(db: AsyncSession, original: ItemModel) -> None:
     return
 
 async def create_item(
-        db: AsyncSession, item_create:ItemCreate,user_id: UUID
+        db: AsyncSession, item_create:ItemCreate,user_id: UUID,image_urls: List[str]
 ) -> ItemModel:
     print("\n" + "="*30)
     print("🚀 create_item started")
@@ -131,6 +131,15 @@ async def create_item(
         created_at=current_time,
         updated_at=current_time
     )
+
+    for url in item_create.image_urls:
+        new_image = ItemImage(
+            id=str(uuid.uuid4()),
+            item_id=new_uuid,
+            image_url=url,
+            created_at=datetime.now()
+        )
+        db.add(new_image)
 
 
     embedding_list = None

@@ -44,7 +44,6 @@ class ItemBase(BaseModel):
     title: Optional[str] = Field(None,min_length=1, max_length=255,example="Nintendo Switch2")
     price: int = Field(None,example=30000)
     description: Optional[str] = Field(None,example="これは今大人気のゲーム機です！")
-    images: List[ImageResponse] = []
     
 class ItemCreate(ItemBase):
     category_id: Optional[int] = Field(None, example=102)
@@ -67,6 +66,7 @@ class ItemResponse(ItemBase):
     brand: Optional[Brand] = None 
     category: Optional[Category] = None
     condition: Optional[Condition] = None  
+    images: List[ImageResponse]
     created_at: datetime
     updated_at: datetime
 
