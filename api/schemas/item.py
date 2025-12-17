@@ -76,9 +76,8 @@ class ItemResponse(ItemBase):
 
 class ItemSimpleResponse(BaseModel):
     id: UUID
-    title: str
-    price: int
-    status: str
+    seller_id: UUID
+
 
     class Config:
         from_attributes = True

@@ -33,9 +33,11 @@ async def create_comment(
 async def get_comments_by_item_id(db: AsyncSession, item_id: str) -> List[CommentModel]:
     result = await db.execute(
         select(CommentModel)
-        .options(selectinload(CommentModel.user)) # ユーザー情報も一緒に！
         .filter(CommentModel.item_id == item_id)
-        .order_by(CommentModel.created_at) # 古い順
+        .options(selectinload(CommentModel.user),
+                selectinload(CommentModel.item)
+                )
+        .order_by(CommentModel.created_at) 
     )
     return result.scalars().all()
 
@@ -46,8 +48,3 @@ async def get_comment_by_id(db: AsyncSession, comment_id: str) -> CommentModel |
         .filter(CommentModel.id == comment_id)
     )
     return result.scalars().first()
-
-async def delete_comment(db: AsyncSession, original: CommentModel) -> None:
-    await db.delete(original)
-    await db.commit()
-    return
