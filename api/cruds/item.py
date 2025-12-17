@@ -132,7 +132,7 @@ async def create_item(
         updated_at=current_time
     )
 
-    for url in item_create.image_urls:
+    for url in image_urls:
         new_image = ItemImage(
             id=str(uuid.uuid4()),
             item_id=new_uuid,
