@@ -1,6 +1,6 @@
 import os
 from fastapi import APIRouter,Depends, HTTPException,status,File, UploadFile, Form
-from typing import Annotated,List
+from typing import Annotated,List,Optional
 import api.schemas.item as item_schema
 import api.cruds.item as item_crud
 import api.schemas.users as users_schema
@@ -18,11 +18,26 @@ router = APIRouter()
 
 @router.post("/item",response_model=item_schema.ItemResponse,operation_id="postItem", tags=["Item"])
 async def post_item(
-    item_body: item_schema.ItemCreate,
     current_user: Annotated[users_schema.UserMeResponse, Depends(get_current_user)],
+    title: str = Form(...),
+    price: int = Form(...),
+    description: Optional[str] = Form(None),
+    category_id: int = Form(None),   # フロントから送られるID
+    brand_id: int = Form(None),      # フロントから送られるID
+    condition_id: int = Form(None),  # フロントから送られるID
+
     files: List[UploadFile] = File(default=[]),
-    db: AsyncSession= Depends(get_db)
-    ):
+    db: AsyncSession = Depends(get_db),
+):
+    item_body = item_schema.ItemCreate(
+        title=title,
+        price=price,
+        description=description,
+        category_id=category_id,
+        brand_id=brand_id,
+        condition_id=condition_id
+    )
+
     image_urls = []
     
     if files:
