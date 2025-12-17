@@ -43,3 +43,4 @@ pymysql
 torch
 transformers
 numpy
+google-cloud-storage
