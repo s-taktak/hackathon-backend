@@ -8,7 +8,7 @@ from api.utils.searcher import VectorSearchEngine
 # --- ルーターのインポート ---
 # 循環参照を避けるため、ここでは関数内でインポートするか、
 # coreの初期化が済んだ後に router を include する構成にします。
-from api.routers import auth, item, me, search,comment,users
+from api.routers import auth, item, me, search,comment,users,recommend
 
 
 # モデルのパス設定
@@ -40,6 +40,7 @@ app.include_router(search.router)
 app.include_router(me.router)
 app.include_router(comment.router)
 app.include_router(users.router)
+app.include_router(recommend.router)
 
 app.add_middleware(
     CORSMiddleware,
