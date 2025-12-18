@@ -22,7 +22,6 @@ class Item(Base):
     created_at = Column(DateTime, nullable=False)
     updated_at = Column(DateTime, nullable=False)
 
-    # リレーション: これを書くと、item.seller.username のようにアクセスできます
     seller = relationship("User", back_populates="items")
     category = relationship("Category", back_populates="items")
     brand = relationship("Brand", back_populates="items")

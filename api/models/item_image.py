@@ -11,5 +11,4 @@ class ItemImage(Base):
     
     created_at = Column(DateTime, nullable=False)
 
-    # リレーション
     item = relationship("Item", back_populates="images")

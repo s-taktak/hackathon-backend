@@ -57,6 +57,7 @@ async def get_items_by_ids(db: AsyncSession, item_ids: List[str]) -> List[ItemMo
             selectinload(ItemModel.condition),
             selectinload(ItemModel.images)
         )
+        .filter(ItemModel.status == "on_sale")
         .filter(ItemModel.id.in_(item_ids))
     )
     items = result.scalars().all()
