@@ -20,7 +20,7 @@ async def recommend_items(
         print("⚠️ Search engine is not loaded.")
         return []
 
-    item_vector = await get_vector_by_id(db, item_id)
+    item_vector = await item_crud.get_vector_by_id(db, item_id)
 
     if not item_vector:
         raise HTTPException(status_code=404, detail="Vector not found for this item")
