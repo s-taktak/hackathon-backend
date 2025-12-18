@@ -1,12 +1,11 @@
-from typing import Optional,List
-
+from typing import Optional, List
 from pydantic import BaseModel, Field
 from datetime import datetime
 from uuid import UUID
 from enum import Enum
 import api.schemas.users as user_schema
 
-class ItemStatus(str,Enum):
+class ItemStatus(str, Enum):
     ON_SALE = 'on_sale'
     SOLD_OUT = 'sold_out'
     DRAFT = 'draft'
@@ -23,7 +22,6 @@ class Category(BaseModel):
     name: str
     depth: int
 
-
     class Config:
         from_attributes = True
 
@@ -37,23 +35,23 @@ class Condition(BaseModel):
 class ImageResponse(BaseModel):
     id: UUID
     image_url: str
+
     class Config:
         from_attributes = True
 
 class ItemBase(BaseModel):
-    title: Optional[str] = Field(None,min_length=1, max_length=255,example="Nintendo Switch2")
-    price: int = Field(None,example=30000)
-    description: Optional[str] = Field(None,example="これは今大人気のゲーム機です！")
+    title: Optional[str] = Field(None, min_length=1, max_length=255, example="Nintendo Switch2")
+    price: int = Field(None, example=30000)
+    description: Optional[str] = Field(None, example="これは今大人気のゲーム機です！")
     
 class ItemCreate(ItemBase):
     category_id: Optional[int] = Field(None, example=102)
-    brand_id: Optional[int] = Field(0, example=5)
-    condition_id: Optional[int] = Field(0, example=1)
-
+    brand_id: Optional[int] = Field(None, example=5)
+    condition_id: Optional[int] = Field(None, example=1)
 
 class ItemUpdate(BaseModel):
     title: Optional[str] = Field(None)
-    price: Optional[int]= Field(None,ge=0)
+    price: Optional[int] = Field(None, ge=0)
     description: Optional[str] = Field(None)
     category_id: Optional[int] = Field(None)
     brand_id: Optional[int] = Field(None)
@@ -70,14 +68,12 @@ class ItemResponse(ItemBase):
     created_at: datetime
     updated_at: datetime
 
-
     class Config:
         from_attributes = True
 
 class ItemSimpleResponse(BaseModel):
     id: UUID
     seller_id: UUID
-
 
     class Config:
         from_attributes = True

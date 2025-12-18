@@ -9,7 +9,6 @@ from api.schemas.item import ItemCreate, ItemResponse, ItemUpdate
 from api.models.item_image import ItemImage
 import api.core as core
 from api.models.embedding import ItemVector
-import torch
 from uuid import UUID
 import uuid
 from datetime import datetime
@@ -112,7 +111,7 @@ async def create_item(
             id=str(uuid.uuid4()),
             item_id=new_uuid,
             image_url=url,
-            created_at=datetime.now()
+            created_at=current_time
         )
         db.add(new_image)
 

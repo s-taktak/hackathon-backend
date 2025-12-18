@@ -3,7 +3,7 @@ from api.models.users import Base  # ← 作成したuserモデルを読み込�
 import os
 
 # ---------------------------------------------------------
-# 環境変数から設定を取得 (api/db.py と同じロジック)
+# 環境変数から設定を取得 
 # ---------------------------------------------------------
 DB_USER = os.getenv("MYSQL_USER", "uttc")
 DB_PASSWORD = os.getenv("MYSQL_PWD", "password")
@@ -34,7 +34,6 @@ engine = create_engine(
 )
 
 def reset_database():
-    # 注意: これを実行すると既存のデータが全て消えます！
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     print("✅ テーブルを再作成しました！")
