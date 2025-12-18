@@ -285,7 +285,7 @@ async def get_vector_by_id(db: AsyncSession,item_id:str):
         .filter(ItemVector.item_id == item_id)
         )
     
-    return result.scalars().all()
+    return result.scalars().first()
 
 
 async def purchase_item(
