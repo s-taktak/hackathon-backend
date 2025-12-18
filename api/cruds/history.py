@@ -3,12 +3,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from api.models.history import History as HistoryModel
 import uuid
-from uuid import UUID
 from datetime import datetime
 from typing import List
 
 async def record_history(db: AsyncSession, user_id: str, item_id: str) -> None:
-    # 1. 過去の履歴を探す
     result = await db.execute(
         select(HistoryModel)
         .filter(HistoryModel.user_id == user_id, HistoryModel.item_id == item_id)
@@ -18,10 +16,8 @@ async def record_history(db: AsyncSession, user_id: str, item_id: str) -> None:
     current_time = datetime.now()
 
     if history:
-        # 2. あれば、見た日時を「今」に更新
         history.viewed_at = current_time
     else:
-        # 3. なければ、新しく作る
         new_id = str(uuid.uuid4())
         history = HistoryModel(
             id=new_id,
