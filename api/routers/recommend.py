@@ -22,9 +22,6 @@ async def recommend_items(
 
     item_vector = await item_crud.get_vector_by_id(db, item_id)
 
-    if not item_vector:
-        raise HTTPException(status_code=404, detail="Vector not found for this item")
-
 
     # 3. MySQLからベクトル検索を実行 (CRUD呼び出し)
     # ここで「全件スキャン＆類似度計算」が走ります
