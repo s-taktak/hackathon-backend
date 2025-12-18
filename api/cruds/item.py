@@ -47,7 +47,7 @@ async def get_item(db: AsyncSession, item_id: str) -> ItemModel | None:
 async def get_items_by_ids(db: AsyncSession, item_ids: List[str]) -> List[ItemModel]:
     if not item_ids:
         return []
-        
+
     result = await db.execute(
         select(ItemModel)
         .options(
@@ -55,13 +55,16 @@ async def get_items_by_ids(db: AsyncSession, item_ids: List[str]) -> List[ItemMo
             selectinload(ItemModel.category),
             selectinload(ItemModel.brand),
             selectinload(ItemModel.condition),
-            selectinload(ItemModel.images),
+            selectinload(ItemModel.images)
         )
         .filter(ItemModel.id.in_(item_ids))
     )
     items = result.scalars().all()
+    
     items_map = {item.id: item for item in items}
-    return [items_map[id] for id in item_ids if id in items_map]
+    sorted_items = [items_map[id] for id in item_ids if id in items_map]
+    
+    return sorted_items
 
 async def get_items_by_user_id(db: AsyncSession, user_id: str) -> List[ItemModel]:
     result = await db.execute(
@@ -81,9 +84,10 @@ async def get_items_by_user_id(db: AsyncSession, user_id: str) -> List[ItemModel
 async def delete_item(db: AsyncSession, original: ItemModel) -> None:
     await db.delete(original)
     await db.commit()
+    return
 
 async def create_item(
-    db: AsyncSession, item_create: ItemCreate, user_id: UUID, image_urls: List[str]
+        db: AsyncSession, item_create: ItemCreate, user_id: UUID, image_urls: List[str]
 ) -> ItemModel:
     new_uuid = str(uuid.uuid4())
     current_time = datetime.now()
@@ -91,17 +95,27 @@ async def create_item(
     item = ItemModel(
         id=new_uuid,
         seller_id=user_id,
-        **item_create.model_dump(), # まとめて流し込むと綺麗です
+        title=item_create.title,
+        price=item_create.price,
+        description=item_create.description,
+        category_id=item_create.category_id,
+        brand_id=item_create.brand_id,
+        condition_id=item_create.condition_id,
         status="on_sale",
         created_at=current_time,
         updated_at=current_time
     )
 
-    # --- 画像登録 ---
     for url in image_urls:
-        db.add(ItemImage(id=str(uuid.uuid4()), item_id=new_uuid, image_url=url, created_at=current_time))
+        new_image = ItemImage(
+            id=str(uuid.uuid4()),
+            item_id=new_uuid,
+            image_url=url,
+            created_at=datetime.now()
+        )
+        db.add(new_image)
 
-    # --- ベクトル生成 ---
+    embedding_list = None
     if core.search_engine and core.search_engine.model:
         try:
             item_dict = {
@@ -111,28 +125,28 @@ async def create_item(
                 "category_id": item_create.category_id,
                 "condition_id": item_create.condition_id
             }
-            # 💡 encode_single_item の中で .tolist() までやっておくと吉
             embedding_list = core.search_engine.encode_single_item(item_dict)
-            
-            if embedding_list:
-                db.add(ItemVector(item_id=new_uuid, embedding=embedding_list))
-            else:
-                print(f"⚠️ Vector generation returned empty for: {new_uuid}")
         except Exception as e:
-            # 💡 pass にせず、必ずエラーを表示させる
             print(f"❌ ERROR in create_item (encoding): {e}")
 
+    if embedding_list:
+        new_vector = ItemVector(
+            item_id=new_uuid,
+            embedding=embedding_list
+        )
+        db.add(new_vector)
+    
     db.add(item)
     await db.commit()
+    await db.refresh(item)
     return await get_item(db, new_uuid)
-
 
 async def update_item(
     db: AsyncSession, item_id: str, item_update: ItemUpdate
 ) -> ItemModel | None:
     VECTOR_FIELDS = ["title", "description", "price", "category_id", "brand_id", "condition_id"]
     item = await get_item(db, item_id)
-    if not item:
+    if item is None:
         return None
 
     update_data = item_update.model_dump(exclude_unset=True)
@@ -155,17 +169,28 @@ async def update_item(
                 "condition_id": item.condition_id
             }
             new_embedding_list = core.search_engine.encode_single_item(item_dict)
+            
             if new_embedding_list:
-                result = await db.execute(select(ItemVector).filter(ItemVector.item_id == item_id))
-                current_vector = result.scalars().first()
+                existing_vector = await db.execute(
+                    select(ItemVector).filter(ItemVector.item_id == item_id)
+                )
+                current_vector = existing_vector.scalars().first()
+                
                 if current_vector:
                     current_vector.embedding = new_embedding_list
+                    db.add(current_vector)
                 else:
-                    db.add(ItemVector(item_id=item_id, embedding=new_embedding_list))
+                    new_vector = ItemVector(
+                        item_id=item_id, 
+                        embedding=new_embedding_list
+                    )
+                    db.add(new_vector)
         except Exception:
             pass
 
+    db.add(item)
     await db.commit()
+    await db.refresh(item)
     return await get_item(db, item_id)
 
 async def get_all_vectors(db: AsyncSession):
@@ -173,19 +198,24 @@ async def get_all_vectors(db: AsyncSession):
     return result.scalars().all()
 
 async def get_vector_by_id(db: AsyncSession, item_id: str):
-    result = await db.execute(select(ItemVector).filter(ItemVector.item_id == item_id))
+    result = await db.execute(
+        select(ItemVector)
+        .filter(ItemVector.item_id == item_id)
+    )
     return result.scalars().first()
 
 async def purchase_item(
-    db: AsyncSession, item_id: str, buyer_id: str, tx_id: str
+    db: AsyncSession, 
+    item_id: str,
+    buyer_id: str,
+    tx_id: str,
 ) -> ItemModel | None:
     item = await get_item(db, item_id)
-    if not item:
+    if item is None:
         return None
 
-    current_time = datetime.utcnow()
     item.status = "sold_out"
-    item.updated_at = current_time
+    item.updated_at = datetime.now()
 
     transaction = TransactionModel(
         id=tx_id,
@@ -193,10 +223,11 @@ async def purchase_item(
         buyer_id=buyer_id,
         seller_id=item.seller_id,
         transaction_price=item.price,
-        created_at=current_time
+        created_at=datetime.now()
     )
 
     db.add(item)
     db.add(transaction)
     await db.commit()
+    await db.refresh(item)
     return await get_item(db, item_id)

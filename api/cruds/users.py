@@ -2,12 +2,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from api.models.users import User as UserModel
 from api.schemas.users import UserCreate
-from api.schemas.users import UserMeResponse
 import uuid
 from uuid import UUID
 from datetime import datetime
 
-async def get_user_by_email(db: AsyncSession,email:str) -> UserModel |None:
+async def get_user_by_email(db: AsyncSession, email: str) -> UserModel | None:
     result = await db.execute(select(UserModel).filter(UserModel.email == email))
     return result.scalars().first()
 
@@ -16,8 +15,12 @@ async def get_user_by_id(db: AsyncSession, user_id: UUID) -> UserModel | None:
     return result.scalars().first()
 
 async def create_user(
-        db: AsyncSession, user_create:UserCreate,hashed_password
+        db: AsyncSession, user_create: UserCreate, hashed_password: str
 ) -> UserModel:
+    existing_user = await get_user_by_email(db, user_create.email)
+    if existing_user:
+        raise ValueError("User with this email already exists.")
+
     new_uuid = str(uuid.uuid4())
     current_time = datetime.now()
 

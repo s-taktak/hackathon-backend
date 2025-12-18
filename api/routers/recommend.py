@@ -20,7 +20,7 @@ async def recommend_items(
         print("⚠️ Search engine is not loaded.")
         return []
 
-    item_vector = await item_crud.get_vector_by_id(db, item_id)
+    item_vector = await item_crud.get_vector_by_id(db, str(item_id))
 
 
     # 3. MySQLからベクトル検索を実行 (CRUD呼び出し)

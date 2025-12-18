@@ -9,12 +9,10 @@ class Category(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
     
-    # 親カテゴリへの参照 (自分自身を参照)
     parent_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     depth = Column(Integer, nullable=False) 
 
     items = relationship("Item", back_populates="category")
     
-    # (オプション) 親子関係を辿るためのリレーション
     children = relationship("Category", back_populates="parent")
     parent = relationship("Category", remote_side=[id], back_populates="children")
