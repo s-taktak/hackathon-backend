@@ -25,7 +25,7 @@ async def recommend_items(
     # 3. MySQLからベクトル検索を実行 (CRUD呼び出し)
     # ここで「全件スキャン＆類似度計算」が走ります
     all_vectors = await item_crud.get_all_vectors(db)
-    top_item_ids = core.search_engine.sort_by_similarity(item_vector, all_vectors)
+    top_item_ids = core.search_engine.sort_by_similarity(item_vector.vector, all_vectors)
     if not top_item_ids:
         return []
 
