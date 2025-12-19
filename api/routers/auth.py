@@ -10,11 +10,15 @@ import jwt
 from jwt.exceptions import InvalidTokenError
 from pwdlib import PasswordHash
 from datetime import datetime, timedelta, timezone
+import os
 
 
 router = APIRouter()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 password_hash = PasswordHash.recommended()
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 30))
+SECRET_KEY = os.getenv("SECRET_KEY", "temporary_secret_key_for_dev") 
+ALGORITHM = os.getenv("ALGORITHM", "HS256") 
 
 def verify_password(plain_password, hashed_password):
     return password_hash.verify(plain_password, hashed_password)
