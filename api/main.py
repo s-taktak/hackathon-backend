@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import api.models
 import api.core as core
 from api.utils.searcher import VectorSearchEngine
-from api.routers import auth, item, me, search, comment, users, recommend
+from api.routers import auth, item, me, search, comment, users, recommend,category
 
 MODEL_PATH = "/code/api/data/mercari_twotower_model.pth"
 ENCODERS_PATH = "/code/api/data/encoders.pkl"
@@ -30,6 +30,7 @@ app.include_router(me.router)
 app.include_router(comment.router)
 app.include_router(users.router)
 app.include_router(recommend.router)
+app.include_router(category.router)
 
 app.add_middleware(
     CORSMiddleware,
