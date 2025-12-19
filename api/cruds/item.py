@@ -202,6 +202,8 @@ async def get_purchased_items_by_user(db: AsyncSession, user_id: str) -> List[It
         .options(
             selectinload(ItemModel.seller),
             selectinload(ItemModel.category),
+            selectinload(ItemModel.brand),
+            selectinload(ItemModel.condition),
             selectinload(ItemModel.images),
         )
         .order_by(desc(TransactionModel.created_at)) # 購入順に並べる
