@@ -28,6 +28,13 @@ async def get_my_listings(
 ):
     return await item_crud.get_items_by_user_id(db, str(current_user.id))
 
+@router.get("/users/me/purchased", response_model=list[item_schema.ItemResponse], operation_id="getPurchasedItems", tags=["Me"])
+async def get_purchased_items(
+    current_user: Annotated[users_schema.UserResponse, Depends(get_current_user)],
+    db: AsyncSession = Depends(get_db),
+):
+    return await item_crud.get_purchased_items_by_user(db, user_id=str(current_user.id))
+
 @router.get("/users/me/history", response_model=List[history_schema.HistoryResponse], operation_id="getHistory", tags=["Me"])
 async def get_browsing_history(
     current_user: Annotated[users_schema.UserResponse, Depends(get_current_user)],
