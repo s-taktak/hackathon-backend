@@ -16,15 +16,10 @@ async def recommend_items(
     db: AsyncSession = Depends(get_db)
 ):
     if not core.search_engine:
-        # 準備できていない場合はエラーではなく空リストを返す（または503エラー）
-        print("⚠️ Search engine is not loaded.")
         return []
 
     item_vector = await item_crud.get_vector_by_id(db, str(item_id))
 
-
-    # 3. MySQLからベクトル検索を実行 (CRUD呼び出し)
-    # ここで「全件スキャン＆類似度計算」が走ります
     all_vectors = await item_crud.get_all_vectors(db)
     top_item_ids = core.search_engine.sort_by_similarity(item_vector.embedding, all_vectors,top_k=4)
     if not top_item_ids:

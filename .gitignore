@@ -1,0 +1,19 @@
+# 仮想環境（今回のエラーの原因）
+.dockervenv/
+venv/
+.venv/
+env/
+
+# Python のキャッシュ
+__pycache__/
+*.pyc
+
+# 環境変数（秘匿情報）
+.env
+
+# セキュリティ関連（秘密鍵など）
+security/*.pem
+
+# DB やモデルなどの大容量ファイル
+api/data/*.pth
+api/data/*.pkl
