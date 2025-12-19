@@ -23,6 +23,7 @@ async def get_items_list(db: AsyncSession, skip: int, limit: int):
             selectinload(ItemModel.condition),
             selectinload(ItemModel.images),
         )
+        .filter(ItemModel.status == "on_sale")
         .order_by(desc(ItemModel.updated_at))
         .offset(skip)
         .limit(limit)
