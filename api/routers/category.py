@@ -5,6 +5,6 @@ from api.cruds.category import get_category
 
 router = APIRouter()
 
-@router.get("/categories", tag=["category"])
+@router.get("/categories",operation_id="getCategories", tags=["category"])
 def get_categories(parent_id: int = None, db: AsyncSession = Depends(get_db)):
     return get_category(parent_id=parent_id)
