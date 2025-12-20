@@ -89,7 +89,7 @@ async def ai_search_endpoint(payload: AiSearchRequest, db: AsyncSession = Depend
                 content = json.dumps(result)
 
             elif func_name == "search_similar_items":
-                recommended_items = await search_similar_items(db, args)
+                recommended_items = await search_similar_items(db, **args)
                 content = json.dumps([{"id": i.id, "title": i.title} for i in recommended_items])
 
             messages.append({
