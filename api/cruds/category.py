@@ -33,7 +33,10 @@ async def find_category_id(
 
     output = []
     for cat in categories:
-        path = f"{cat.parent.name} > {cat.name}"
+        if cat.parent:
+            path = f"{cat.parent.name} > {cat.name}"
+        else:
+            path = f"{cat.name}"
         output.append({"id": cat.id, "path": path})
         
     return output
