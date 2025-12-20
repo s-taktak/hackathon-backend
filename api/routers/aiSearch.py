@@ -16,7 +16,6 @@ async def search_similar_items(
     category_id: int,
     name: str,
     price: float,
-    brand_id: int = 0,
     condition_id: int = 1
 ):
     
@@ -24,7 +23,7 @@ async def search_similar_items(
         "name": name,
         "price": price,
         "category_id": category_id,
-        "brand_id": brand_id,
+        "brand_id": 0,
         "condition_id": condition_id
     }
 

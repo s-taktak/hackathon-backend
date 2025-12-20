@@ -26,7 +26,8 @@ TOOLS = [
                 "properties": {
                     "category_id": {"type": "integer"},
                     "name": {"type": "string"},
-                    "price": {"type": "number"}
+                    "price": {"type": "number"},
+                    "condition_id": {"type": "integer"}
                 },
                 "required": ["category_id", "name"]
             }
