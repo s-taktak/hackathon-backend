@@ -1,4 +1,4 @@
-tools = [
+TOOLS = [
     {
         "type": "function",
         "function": {
