@@ -52,23 +52,21 @@ async def search_similar_items(
     )
     return await item_crud.get_items_by_ids(db, top_item_ids)
 
-@router.post("/aiSearch", response_model=AiSearchResponse, tags=["aiSearch"])
+@router.post("/aiSearch", response_model=AiSearchResponse)
 async def ai_search_endpoint(payload: AiSearchRequest, db: AsyncSession = Depends(get_db)):
-    
+
     messages = [m.model_dump(exclude_none=True) for m in payload.history]
     
     messages.append({"role": "user", "content": payload.message})
 
-    
     if not any(m["role"] == "system" for m in messages):
-        messages.insert(0, {
-            "role": "system", 
-            "content": SYSTEM_PROMPT
-        })
+        messages.insert(0, {"role": "system", "content": SYSTEM_PROMPT})
 
+    final_reply = ""
     recommended_items = []
 
-    for _ in range(4):  
+
+    for _ in range(4):
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
@@ -76,22 +74,27 @@ async def ai_search_endpoint(payload: AiSearchRequest, db: AsyncSession = Depend
         )
         response_msg = response.choices[0].message
         
-        if not response_msg.tool_calls:
+        if response_msg.content and not response_msg.tool_calls:
             final_reply = response_msg.content
+            messages.append({"role": "assistant", "content": final_reply})
             break
 
-        messages.append(response_msg)
+        messages.append(response_msg.model_dump(exclude_none=True))
 
         for tool_call in response_msg.tool_calls:
             func_name = tool_call.function.name
             args = json.loads(tool_call.function.arguments)
+            content = "" 
 
             if func_name == "find_category_id":
                 result = await category_crud.find_category_id(db, args["keyword"])
                 content = json.dumps(result)
 
             elif func_name == "search_similar_items":
-                recommended_items = await search_similar_items(db, **args)
+                valid_params = ["category_id", "name", "price", "condition_id"]
+                filtered_args = {k: v for k, v in args.items() if k in valid_params}
+                
+                recommended_items = await search_similar_items(db, **filtered_args)
                 content = json.dumps([{"id": i.id, "title": i.title} for i in recommended_items])
 
             messages.append({
@@ -100,8 +103,9 @@ async def ai_search_endpoint(payload: AiSearchRequest, db: AsyncSession = Depend
                 "name": func_name,
                 "content": content
             })
-    else:
-        final_reply = "条件に合う商品を検索しました。"
+            
+    if not final_reply:
+        final_reply = "条件に合う商品を検索しました。結果をご確認ください。"
 
     return AiSearchResponse(
         reply=final_reply,
