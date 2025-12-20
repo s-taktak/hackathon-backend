@@ -1,5 +1,5 @@
 from sqlalchemy import select, or_
-from sqlalchemy.orm import selectionload
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from api.models import Category as CategoryModel
@@ -25,7 +25,7 @@ async def find_category_id(
             CategoryModel.depth==1
         )
         .options(
-            selectionload(CategoryModel.parent)
+            selectinload(CategoryModel.parent)
         )
         .limit(10)
     )
