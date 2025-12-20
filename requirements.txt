@@ -44,3 +44,4 @@ torch
 transformers
 numpy
 google-cloud-storage
+openai

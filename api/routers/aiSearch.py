@@ -2,12 +2,48 @@ from fastapi import APIRouter, Depends
 from api.db import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 import api.cruds.category as category_crud
+import api.cruds.item as item_crud
 from api.utils.function import TOOLS
+import api.core as core
 from openai import OpenAI
 import json
 
 client = OpenAI()
 router = APIRouter()
+
+async def search_similar_items(
+    db: AsyncSession,
+    category_id: int,
+    name: str,
+    price: float,
+    brand_id: int = 0,
+    condition_id: int = 1
+):
+    target_vectors = await item_crud.get(db, category_id)
+    
+    if not target_vectors:
+        return []
+
+    # 2. ユーザーの入力情報を TwoTowerModel でベクトル化 (Query Vector)
+    # 佐藤さんの TwoTowerModel.forward_one_tower を呼び出します
+    query_vector = await core.search_engine.encode_single_item(
+        name=name,
+        price=price,
+        category_id=category_id,
+        brand_id=brand_id,
+        condition_id=condition_id
+    )
+
+    # 3. 類似度計算 (Search Engine)
+    # 既存の core.search_engine.sort_by_similarity を使用
+    top_item_ids = core.search_engine.sort_by_similarity(
+        query_vector, 
+        target_vectors, 
+        top_k=5
+    )
+
+    # 4. アイテム詳細を DB から取得して返却
+    return await item_crud.get_items_by_ids(db, top_item_ids)
 
 @router.post("/aiSearch")
 async def aiSearch(
