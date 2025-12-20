@@ -16,11 +16,11 @@ async def get_category(
 async def find_category_id(
         db: AsyncSession,
         keyword: str,
-):
+)-> List[CategoryModel]:
     result = await db.execute(
         select(CategoryModel)
         .where(
-            CategoryModel.name.ilike(f"{keyword}"),
+            CategoryModel.name.ilike(f"%{keyword}%"),
             CategoryModel.depth==1
         )
         .limit(10)
