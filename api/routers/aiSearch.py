@@ -15,7 +15,10 @@ router = APIRouter()
 SYSTEM_PROMPT = """
 あなたはフリマアプリの専門家です。
 1. ユーザーの要望から「商品名」「予算」「状態」を読み取ってください。
-2. カテゴリー検索（find_category_id）には英語キーワードを使用してください。
+2. カテゴリー特定（find_category_id）のコツ：
+   - ユーザーが「MacBook」と言ったら「Laptop」や「Computer」のように、
+     具体的な商品名を「一般的な英語のカテゴリー名」に変換して検索してください。
+   - 必ず英語のキーワードを使用してください。
 3. 商品検索（search_similar_items）を行う際：
    - 価格(price)が「〜円くらい」と言われたらその数値を指定してください。
    - 状態(condition)が「新品」なら 1、「中古」や「気にしない」なら 3 程度を割り当ててください。
@@ -66,7 +69,7 @@ async def ai_search_endpoint(payload: AiSearchRequest, db: AsyncSession = Depend
     recommended_items = []
 
 
-    for _ in range(4):
+    for _ in range(10):
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
