@@ -28,12 +28,10 @@ class Category(BaseModel):
 class CategorySearchResponse(BaseModel):
     id: int
     name: str
-    depth: int
-    parent: Optional[Category] = None
+    path: str  
 
     class Config:
         from_attributes = True
-
 class Condition(BaseModel):
     id: int
     name: str
