@@ -73,7 +73,7 @@ async def aiSearch(
             args = json.loads(tool_call.function.arguments)
 
             if func_name == "find_category_id":
-                result = await category_crud.search_depth2(db, args["keyword"])
+                result = await category_crud.find_category_id(db, args["keyword"])
                 content = json.dumps(result)
 
             elif func_name == "search_similar_items":
