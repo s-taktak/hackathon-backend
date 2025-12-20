@@ -13,18 +13,20 @@ client = OpenAI()
 router = APIRouter()
 
 SYSTEM_PROMPT = """
-あなたはフリマアプリのプロ。
-【重要】カテゴリーデータはすべて「英語」で管理されています。
-1. ユーザーの要望を聞いたら、キーワードを英語に翻訳してください（例：「パソコン」→「Laptop」や「PC」）。
-2. find_category_id を呼び出す際は、その英語キーワードを使って ID (depth 1) を特定してください。
-3. 特定した ID を使って商品を検索してください。
+あなたはフリマアプリの専門家です。
+1. ユーザーの要望から「商品名」「予算」「状態」を読み取ってください。
+2. カテゴリー検索（find_category_id）には英語キーワードを使用してください。
+3. 商品検索（search_similar_items）を行う際：
+   - 価格(price)が「〜円くらい」と言われたらその数値を指定してください。
+   - 状態(condition)が「新品」なら 1、「中古」や「気にしない」なら 3 程度を割り当ててください。
+   - 明確な指定がないパラメータは、デフォルト値（price=0, condition_id=1）を使用してください。
 """
 
 async def search_similar_items(
     db: AsyncSession,
     category_id: int,
     name: str,
-    price: float,
+    price: float =0.0,
     condition_id: int = 1
 ):
     
