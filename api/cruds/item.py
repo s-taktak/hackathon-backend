@@ -126,7 +126,7 @@ async def create_item(
                 "category_id": item_create.category_id,
                 "condition_id": item_create.condition_id
             }
-            embedding_list = core.search_engine.encode_single_item(item_dict)
+            embedding_list = await core.search_engine.encode_single_item(item_dict)
         except Exception as e:
             print(f"❌ ERROR in create_item (encoding): {e}")
 
