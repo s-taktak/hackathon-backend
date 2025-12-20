@@ -195,7 +195,6 @@ async def update_item(
     return await get_item(db, item_id)
 
 async def get_purchased_items_by_user(db: AsyncSession, user_id: str) -> List[ItemModel]:
-    # Transactionテーブルを結合して、buyer_idが自分に一致するItemを取得
     result = await db.execute(
         select(ItemModel)
         .join(TransactionModel, ItemModel.id == TransactionModel.item_id)
@@ -207,7 +206,7 @@ async def get_purchased_items_by_user(db: AsyncSession, user_id: str) -> List[It
             selectinload(ItemModel.condition),
             selectinload(ItemModel.images),
         )
-        .order_by(desc(TransactionModel.created_at)) # 購入順に並べる
+        .order_by(desc(TransactionModel.created_at)) 
     )
     return result.scalars().all()
 

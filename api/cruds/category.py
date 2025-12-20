@@ -1,4 +1,5 @@
 from sqlalchemy import select, or_
+from sqlalchemy.orm import selectionload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from api.models import Category as CategoryModel
@@ -22,6 +23,9 @@ async def find_category_id(
         .where(
             CategoryModel.name.ilike(f"%{keyword}%"),
             CategoryModel.depth==1
+        )
+        .options(
+            selectionload(CategoryModel.parent)
         )
         .limit(10)
     )

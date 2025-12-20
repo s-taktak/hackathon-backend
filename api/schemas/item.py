@@ -25,6 +25,15 @@ class Category(BaseModel):
     class Config:
         from_attributes = True
 
+class CategorySearchResponse(BaseModel):
+    id: int
+    name: str
+    depth: int
+    parent: Optional[Category] = None
+
+    class Config:
+        from_attributes = True
+
 class Condition(BaseModel):
     id: int
     name: str
