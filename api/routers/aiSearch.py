@@ -3,6 +3,7 @@ from api.db import get_db
 from sqlalchemy.ext.asyncio import AsyncSession
 import api.cruds.category as category_crud
 import api.cruds.item as item_crud
+import api.cruds.brand as brand_crud
 from api.utils.function import TOOLS
 from api.schemas.chat import AiSearchRequest,ChatMessage,AiSearchResponse
 import api.core as core
