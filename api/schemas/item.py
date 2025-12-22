@@ -4,18 +4,14 @@ from datetime import datetime
 from uuid import UUID
 from enum import Enum
 import api.schemas.users as user_schema
+from api.schemas.brand import Brand
 
 class ItemStatus(str, Enum):
     ON_SALE = 'on_sale'
     SOLD_OUT = 'sold_out'
     DRAFT = 'draft'
 
-class Brand(BaseModel):
-    id: int
-    name: str
 
-    class Config:
-        from_attributes = True
 
 class Category(BaseModel):
     id: int
