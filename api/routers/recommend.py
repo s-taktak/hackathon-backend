@@ -19,6 +19,9 @@ async def recommend_items(
         return []
 
     item_vector = await item_crud.get_vector_by_id(db, str(item_id))
+    
+    if not item_vector:
+        return []
 
     all_vectors = await item_crud.get_all_vectors(db)
     top_item_ids = core.search_engine.sort_by_similarity(item_vector.embedding, all_vectors,top_k=4)
