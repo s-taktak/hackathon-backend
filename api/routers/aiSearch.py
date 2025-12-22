@@ -99,6 +99,10 @@ async def ai_search_endpoint(payload: AiSearchRequest, db: AsyncSession = Depend
                 
                 recommended_items = await search_similar_items(db, **filtered_args)
                 content = json.dumps([{"id": i.id, "title": i.title} for i in recommended_items])
+            
+            elif func_name == "search_brands":
+                result = await brand_crud.find_brands(db, args["keyword"])
+                content = json.dumps([{"id": b.id, "name": b.name} for b in result])
 
             messages.append({
                 "tool_call_id": tool_call.id,

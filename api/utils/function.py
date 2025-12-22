@@ -3,13 +3,13 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "find_category_id",
-            "description": "商品に最適なカテゴリーIDを特定します。引数のキーワードは必ず【英語】で入力してください（例: 'laptop', 'sneakers', 'camera'）。",
+            "description": "Identify the optimal category ID for an item. The keyword must be in English (e.g., 'laptop', 'sneakers', 'camera').",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "keyword": {
                         "type": "string", 
-                        "description": "英語の検索キーワード（depth 1の特定用）"
+                        "description": "Search keyword in English (for finding depth 1 categories)"
                     }
                 },
                 "required": ["keyword"]
@@ -20,22 +20,39 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "search_similar_items",
-            "description": "カテゴリーIDと商品名、価格などで類似商品を検索します。",
+            "description": "Search for similar items based on category ID, item name, price, etc.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "category_id": {"type": "integer", "description": "find_category_idで取得したID"},
-                    "name": {"type": "string", "description": "英語の商品名キーワード"},
+                    "category_id": {"type": "integer", "description": "ID obtained from find_category_id"},
+                    "name": {"type": "string", "description": "Product name keyword in English"},
                     "price": {
                         "type": "number", 
-                        "description": "ユーザーが希望する価格（数値のみ）。特に指定がない場合は 0 を入力してください。"
+                        "description": "User's budget price. Use 0 if not specified."
                     },
                     "condition_id": {
                         "type": "integer",
-                        "description": "商品の状態。1:新品、2:未使用に近い、3:目立った傷なし、4:やや傷あり、5:傷や汚れあり"
+                        "description": "Item condition. 1:New, 2:Like New, 3:No visible scratches, 4:Slightly scratched, 5:Scratched/Dirty"
                     }
                 },
                 "required": ["category_id", "name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_brands",
+            "description": "Search for brand IDs based on a keyword. Input keyword must be in English.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "keyword": {
+                        "type": "string", 
+                        "description": "Brand search keyword in English"
+                    }
+                },
+                "required": ["keyword"]
             }
         }
     }

@@ -16,3 +16,10 @@ class AiSearchResponse(BaseModel):
     reply: str
     history: List[ChatMessage]
     items: Optional[List[ItemResponse]] = []
+
+class AiPredictRequest(BaseModel):
+    title: str
+
+class AiPredictResponse(BaseModel):
+    category_id: Optional[int] = None
+    brand_id: Optional[int] = None
