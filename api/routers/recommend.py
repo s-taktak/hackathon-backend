@@ -7,6 +7,7 @@ import api.schemas.item as item_schema
 import api.cruds.item as item_crud
 import api.core as core
 from uuid import UUID
+import json
 
 router = APIRouter()
 
@@ -24,7 +25,12 @@ async def recommend_items(
         return []
 
     all_vectors = await item_crud.get_all_vectors(db)
-    top_item_ids = core.search_engine.sort_by_similarity(item_vector.embedding, all_vectors,top_k=4)
+    
+    embedding = item_vector.embedding
+    if isinstance(embedding, str):
+        embedding = json.loads(embedding)
+        
+    top_item_ids = core.search_engine.sort_by_similarity(embedding, all_vectors,top_k=4)
     if not top_item_ids:
         return []
 
