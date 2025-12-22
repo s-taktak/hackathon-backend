@@ -15,5 +15,5 @@ __pycache__/
 security/*.pem
 
 # DB やモデルなどの大容量ファイル
-api/data/*.pth
-api/data/*.pkl
+# api/data/*.pth
+# api/data/*.pkl
