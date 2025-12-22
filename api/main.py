@@ -14,8 +14,10 @@ async def lifespan(app: FastAPI):
     try:
         engine = VectorSearchEngine(MODEL_PATH, ENCODERS_PATH)
         core.search_engine = engine
+        print("✅ Search engine initialized")
     except Exception:
         core.search_engine = None
+        print("❌ Search engine initialization failed")
     
     yield
     
