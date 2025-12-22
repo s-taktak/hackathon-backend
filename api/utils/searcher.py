@@ -99,7 +99,10 @@ class VectorSearchEngine:
                     dummy_price, dummy_id, dummy_id, dummy_id
                 )
                 return vector.cpu().numpy()[0].tolist()
-            except Exception:
+            except Exception as e:
+                print(f"❌ encode_query error: {e}")
+                import traceback
+                traceback.print_exc()
                 return []
             
     def sort_by_similarity(self, vector: list, all_vectors_data: list, top_k: int = 20) -> list:
