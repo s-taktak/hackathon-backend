@@ -248,3 +248,52 @@ async def purchase_item(
     await db.commit()
     await db.refresh(item)
     return await get_item(db, item_id)
+
+async def sync_vectors(db: AsyncSession) -> int:
+    """
+    全アイテムのベクトルを再計算して保存する
+    """
+    if not core.search_engine:
+        print("Batch sync skipped: Search engine not loaded")
+        return 0
+
+    # 全アイテム取得
+    result = await db.execute(select(ItemModel))
+    items = result.scalars().all()
+    
+    count = 0
+    for item in items:
+        try:
+            item_dict = {
+                "title": item.title,
+                "price": item.price,
+                "brand_id": item.brand_id,
+                "category_id": item.category_id,
+                "condition_id": item.condition_id
+            }
+            # エンコード
+            embedding_list = core.search_engine.encode_single_item(item_dict)
+            
+            if embedding_list:
+                # 既存ベクトルを確認
+                vec_res = await db.execute(
+                    select(ItemVector).filter(ItemVector.item_id == item.id)
+                )
+                current_vector = vec_res.scalars().first()
+                
+                if current_vector:
+                    current_vector.embedding = embedding_list
+                    db.add(current_vector)
+                else:
+                    new_vector = ItemVector(
+                        item_id=item.id, 
+                        embedding=embedding_list
+                    )
+                    db.add(new_vector)
+                count += 1
+        except Exception as e:
+            print(f"❌ Failed to sync vector for item {item.id}: {e}")
+            continue
+
+    await db.commit()
+    return count

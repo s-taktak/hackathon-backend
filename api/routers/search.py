@@ -47,3 +47,14 @@ async def search_items(
     print(f"DEBUG: Items fetched from DB: {len(items)}")
 
     return items
+
+@router.post("/search/sync", operation_id="sync_vectors", tags=["Search"])
+async def sync_vectors(db: AsyncSession = Depends(get_db)):
+    """
+    【管理用】既存アイテムのベクトルを強制的に再生成する
+    """
+    if not core.search_engine:
+        raise HTTPException(status_code=503, detail="Search engine not loaded")
+    
+    count = await item_crud.sync_vectors(db)
+    return {"message": f"Successfully synced {count} items."}
