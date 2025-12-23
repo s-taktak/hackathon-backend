@@ -35,7 +35,7 @@ async def search_similar_items(
 ):
     
     item_data = {
-        "name": name,
+        "title": name,
         "price": price,
         "category_id": category_id,
         "brand_id": 0,
@@ -47,7 +47,7 @@ async def search_similar_items(
     if not target_vectors:
         return []
 
-    query_vector = await core.search_engine.encode_single_item(item_data)
+    query_vector = core.search_engine.encode_single_item(item_data)
 
     top_item_ids = core.search_engine.sort_by_similarity(
         query_vector, 
