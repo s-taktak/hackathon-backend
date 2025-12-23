@@ -24,18 +24,26 @@ async def search_items(
         return []
 
     # 2. キーワードをベクトルに変換 (Pythonリスト)
+    print(f"DEBUG: Start searching for query: '{q}'")
     query_vector = core.search_engine.encode_query(q)
     
     if not query_vector:
+        print("DEBUG: Query vector is empty.")
         return []
 
     # 3. MySQLからベクトル検索を実行 (CRUD呼び出し)
     # ここで「全件スキャン＆類似度計算」が走ります
     all_vectors = await item_crud.get_all_vectors(db)
+    print(f"DEBUG: All vectors fetch count: {len(all_vectors)}")
+
     top_item_ids = core.search_engine.sort_by_similarity(query_vector, all_vectors)
+    print(f"DEBUG: Top item IDs: {top_item_ids}")
+
     if not top_item_ids:
+        print("DEBUG: No top item IDs found.")
         return []
 
     items = await item_crud.get_items_by_ids(db, top_item_ids)
+    print(f"DEBUG: Items fetched from DB: {len(items)}")
 
     return items
