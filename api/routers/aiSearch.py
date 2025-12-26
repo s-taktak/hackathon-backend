@@ -142,7 +142,6 @@ You are an expert listing assistant. Your task is to predict the `category_id` a
 
 @router.post("/ai/suggest", response_model=PredictResponse, operation_id="predict_attributes", tags=["AI"])
 async def suggest_attributes(payload: PredictRequest, db: AsyncSession = Depends(get_db)):
-    print(f"DEBUG: Analyzing item: {payload.title}")
     messages = [
         {"role": "system", "content": PREDICT_SYSTEM_PROMPT},
         {"role": "user", "content": f"Item Title: {payload.title}\nDescription: {payload.description or ''}"}
@@ -167,13 +166,11 @@ async def suggest_attributes(payload: PredictRequest, db: AsyncSession = Depends
         response_msg = response.choices[0].message
         
         if response_msg.tool_calls:
-            print(f"DEBUG: Tool calls triggered: {[t.function.name for t in response_msg.tool_calls]}")
             messages.append(response_msg.model_dump(exclude_none=True))
             for tool_call in response_msg.tool_calls:
                 func_name = tool_call.function.name
                 try:
                     args = json.loads(tool_call.function.arguments)
-                    print(f"DEBUG: Tool '{func_name}' called with args: {args}")
                 except json.JSONDecodeError:
                     print(f"ERROR: Failed to parse arguments for {func_name}")
                     continue
@@ -182,11 +179,9 @@ async def suggest_attributes(payload: PredictRequest, db: AsyncSession = Depends
                 
                 if func_name == "find_category_id":
                     result = await category_crud.find_category_id(db, args["keyword"])
-                    print(f"DEBUG: find_category_id found {len(result)} results for '{args.get('keyword')}'")
                     content = json.dumps(result)
                 elif func_name == "find_brand_id":
                     result = await brand_crud.find_brands(db, args["keyword"])
-                    print(f"DEBUG: find_brand_id found {len(result)} results for '{args.get('keyword')}'")
                     content = json.dumps([{"id": b.id, "name": b.name} for b in result])
                 
                 messages.append({
@@ -198,7 +193,6 @@ async def suggest_attributes(payload: PredictRequest, db: AsyncSession = Depends
         else:
             if response_msg.content:
                 txt = response_msg.content.strip()
-                print(f"DEBUG: Model response (Attempt {i}): {txt}")
                 
                 # Try to extract JSON from code blocks or raw text
                 json_str = txt
@@ -234,7 +228,6 @@ async def suggest_attributes(payload: PredictRequest, db: AsyncSession = Depends
                         category_path=cat_path,
                         brand=brand_obj
                     )
-                    print(f"DEBUG: Successfully parsed IDs: {final_response}")
                 except json.JSONDecodeError:
                     print(f"ERROR: Failed to parse JSON from AI response: {txt}")
                     # If parsing guarantees failure, we might want to continue or retry? 
