@@ -128,10 +128,14 @@ PREDICT_SYSTEM_PROMPT = """
 You are an expert listing assistant. Your task is to predict the `category_id` and `brand_id` for an item.
 
 1. Analyze the item title.
-2. YOU MUST CALL `find_category_id` and `find_brand_id` to get valid IDs from the database. Do not hallucinate IDs.
-3. After receiving tool outputs, OUTPUT a JSON object with the best matching IDs.
-   Format: `{"category_id": <int|null>, "brand_id": <int|null>}`
-4. Do NOT output any conversational text. Only the JSON object.
+2. YOU MUST CALL `find_category_id` and `find_brand_id` using ENGLISH keywords to get candidates.
+3. The tools will return a list of candidates. YOU MUST CHOOSE THE BEST MATCH from the list.
+   - If multiple candidates are returned, pick the one that matches the item best.
+   - Do NOT return null if there are valid candidates in the tool output.
+   - For category, prioritize the most specific leaf category.
+4. OUTPUT a JSON object with the elected IDs.
+   Format: `{"category_id": <int>, "brand_id": <int>}`
+5. Do NOT output any conversational text. Only the JSON object.
 """
 
 @router.post("/ai/suggest", response_model=PredictResponse, operation_id="predict_attributes", tags=["AI"])
