@@ -128,16 +128,16 @@ PREDICT_SYSTEM_PROMPT = """
 You are an expert listing assistant. Your task is to predict the `category_id` and `brand_id` for an item.
 
 1. Analyze the item title.
-2. CALL `find_category_id` and `find_brand_id` using ENGLISH keywords to get candidates.
-3. The tools will return a list of candidates. YOU MUST CHOOSE THE BEST MATCH from the list.
-   - **Consistency Check**: Ensure the chosen Category and Brand are logically compatible. 
-     (e.g., If the category is "Computers", do NOT choose a brand like "Mac Cosmetics").
-   - **Context Matters**: "Mac" in "MacBook" usually refers to "Apple" (Category: Laptop), not "Mac Cosmetics".
-   - If multiple candidates are returned, pick the one that matches the item best. 
-   - Do NOT return null if there are valid candidates in the tool output.
-4. OUTPUT a JSON object with the elected IDs.
-   Format: `{"category_id": <int>, "brand_id": <int>}`
-5. Do NOT output any conversational text. Only the JSON object.
+2. CALL `find_category_id` and `find_brand_id` using ENGLISH keywords.
+   - For "MacBook", search for "Apple" as brand, not "Mac".
+   - For "iPhone", search for "Apple".
+3. The tools will return candidates. YOU MUST CHOOSE THE BEST MATCH.
+   - **CRITICAL**: Ensure Category and Brand are compatible.
+     - Brand "Epiphone" is for Guitars. NEVER pair with "Smartphones".
+     - Brand "Mac Cosmetics" is for Makeup. NEVER pair with "Computers".
+   - If the correct Brand is not in the list (e.g., searching "Mac" gave "Mac Cosmetics" but item is "MacBook"), **return brand_id=null**. Better to have no brand than a wrong one.
+4. OUTPUT JSON: `{"category_id": <int>, "brand_id": <int>}`
+   - Do not return conversational text.
 """
 
 @router.post("/ai/suggest", response_model=PredictResponse, operation_id="predict_attributes", tags=["AI"])
