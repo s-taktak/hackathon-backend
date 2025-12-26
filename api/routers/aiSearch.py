@@ -125,15 +125,18 @@ async def ai_search_endpoint(payload: AiSearchRequest, db: AsyncSession = Depend
     )
 
 PREDICT_SYSTEM_PROMPT = """
-You are an expert listing assistant.
+You are an expert listing assistant. Your task is to predict the `category_id` and `brand_id` for an item.
+
 1. Analyze the item title.
-2. CALL `find_category_id` and `find_brand_id` to get candidates.
-3. OUTPUT a JSON object with the best matching IDs:
-   `{"category_id": <int|null>, "brand_id": <int|null>}`
+2. YOU MUST CALL `find_category_id` and `find_brand_id` to get valid IDs from the database. Do not hallucinate IDs.
+3. After receiving tool outputs, OUTPUT a JSON object with the best matching IDs.
+   Format: `{"category_id": <int|null>, "brand_id": <int|null>}`
+4. Do NOT output any conversational text. Only the JSON object.
 """
 
 @router.post("/ai/suggest", response_model=PredictResponse, operation_id="predict_attributes", tags=["AI"])
 async def suggest_attributes(payload: PredictRequest, db: AsyncSession = Depends(get_db)):
+    print(f"DEBUG: Analyzing item: {payload.title}")
     messages = [
         {"role": "system", "content": PREDICT_SYSTEM_PROMPT},
         {"role": "user", "content": f"Item Title: {payload.title}\nDescription: {payload.description or ''}"}
@@ -143,27 +146,41 @@ async def suggest_attributes(payload: PredictRequest, db: AsyncSession = Depends
     
     final_response = PredictResponse()
     
-    for _ in range(5):
-        response = client.chat.completions.create(
-            model="gpt-4o",
-            messages=messages,
-            tools=suggest_tools,
-        )
+    for i in range(5):
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                tools=suggest_tools,
+                tool_choice="auto" 
+            )
+        except Exception as e:
+            print(f"ERROR: OpenAI API call failed: {e}")
+            break
         
         response_msg = response.choices[0].message
         
         if response_msg.tool_calls:
+            print(f"DEBUG: Tool calls triggered: {[t.function.name for t in response_msg.tool_calls]}")
             messages.append(response_msg.model_dump(exclude_none=True))
             for tool_call in response_msg.tool_calls:
                 func_name = tool_call.function.name
-                args = json.loads(tool_call.function.arguments)
+                try:
+                    args = json.loads(tool_call.function.arguments)
+                    print(f"DEBUG: Tool '{func_name}' called with args: {args}")
+                except json.JSONDecodeError:
+                    print(f"ERROR: Failed to parse arguments for {func_name}")
+                    continue
+
                 content = ""
                 
                 if func_name == "find_category_id":
                     result = await category_crud.find_category_id(db, args["keyword"])
+                    print(f"DEBUG: find_category_id found {len(result)} results for '{args.get('keyword')}'")
                     content = json.dumps(result)
                 elif func_name == "find_brand_id":
                     result = await brand_crud.find_brands(db, args["keyword"])
+                    print(f"DEBUG: find_brand_id found {len(result)} results for '{args.get('keyword')}'")
                     content = json.dumps([{"id": b.id, "name": b.name} for b in result])
                 
                 messages.append({
@@ -174,20 +191,33 @@ async def suggest_attributes(payload: PredictRequest, db: AsyncSession = Depends
                 })
         else:
             if response_msg.content:
-                txt = response_msg.content
-                # Strip markdown code blocks if present
-                if "```json" in txt:
-                    txt = txt.split("```json")[1].split("```")[0]
-                elif "```" in txt:
-                    txt = txt.split("```")[1].split("```")[0]
+                txt = response_msg.content.strip()
+                print(f"DEBUG: Model response (Attempt {i}): {txt}")
                 
+                # Try to extract JSON from code blocks or raw text
+                json_str = txt
+                if "```json" in txt:
+                    json_str = txt.split("```json")[1].split("```")[0].strip()
+                elif "```" in txt:
+                    json_str = txt.split("```")[1].split("```")[0].strip()
+                else:
+                    # Attempt to find the first '{' and last '}'
+                    start = txt.find("{")
+                    end = txt.rfind("}")
+                    if start != -1 and end != -1:
+                        json_str = txt[start:end+1]
+
                 try:
-                    data = json.loads(txt)
+                    data = json.loads(json_str)
                     final_response = PredictResponse(
                         category_id=data.get("category_id"),
                         brand_id=data.get("brand_id")
                     )
-                except:
+                    print(f"DEBUG: Successfully parsed IDs: {final_response}")
+                except json.JSONDecodeError:
+                    print(f"ERROR: Failed to parse JSON from AI response: {txt}")
+                    # If parsing guarantees failure, we might want to continue or retry? 
+                    # For now, just break as we usually end here.
                     pass
             break
             

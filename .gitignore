@@ -1,4 +1,4 @@
-# 仮想環境（今回のエラーの原因）
+# 仮想環境
 .dockervenv/
 venv/
 .venv/
@@ -13,7 +13,3 @@ __pycache__/
 
 # セキュリティ関連（秘密鍵など）
 security/*.pem
-
-# DB やモデルなどの大容量ファイル
-# api/data/*.pth
-# api/data/*.pkl

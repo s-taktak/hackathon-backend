@@ -22,10 +22,10 @@ async def find_category_id(
         select(CategoryModel)
         .where(
             CategoryModel.name.ilike(f"%{keyword}%"),
-            CategoryModel.depth==1
+            CategoryModel.depth==2
         )
         .options(
-            selectinload(CategoryModel.parent)
+            selectinload(CategoryModel.parent).selectinload(CategoryModel.parent)
         )
         .limit(10)
     )
@@ -34,9 +34,10 @@ async def find_category_id(
     output = []
     for cat in categories:
         names = []
-        if cat.parent:
-            names.append(cat.parent.name)
-        names.append(cat.name)
+        curr = cat
+        while curr:
+            names.insert(0, curr.name)
+            curr = curr.parent
         
         path_string = " > ".join(names)
 
