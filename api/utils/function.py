@@ -9,7 +9,24 @@ TOOLS = [
                 "properties": {
                     "keyword": {
                         "type": "string", 
-                        "description": "Search keyword in English (for finding depth 1 categories)"
+                        "description": "Search keyword in English (for finding depth 2 categories)"
+                    }
+                },
+                "required": ["keyword"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "find_brand_id",
+            "description": "Identify the optimal brand ID for an item. The keyword must be in English (e.g., 'apple', 'nike', 'sony').",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "keyword": {
+                        "type": "string", 
+                        "description": "Search keyword in English"
                     }
                 },
                 "required": ["keyword"]
@@ -30,29 +47,13 @@ TOOLS = [
                         "type": "number", 
                         "description": "User's budget price. Use 0 if not specified."
                     },
+                    "brand_id": {"type": "integer", "description": "ID obtained from find_brand_id"},
                     "condition_id": {
                         "type": "integer",
                         "description": "Item condition. 1:New, 2:Like New, 3:No visible scratches, 4:Slightly scratched, 5:Scratched/Dirty"
                     }
                 },
                 "required": ["category_id", "name"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "search_brands",
-            "description": "Search for brand IDs based on a keyword. Input keyword must be in English.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "keyword": {
-                        "type": "string", 
-                        "description": "Brand search keyword in English"
-                    }
-                },
-                "required": ["keyword"]
             }
         }
     }
