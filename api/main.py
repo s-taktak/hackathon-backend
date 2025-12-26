@@ -44,13 +44,3 @@ app.include_router(category.router)
 app.include_router(aiSearch.router)
 app.include_router(brand.router)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://hackathon-frontend-o4tcag5i3-s-taktaks-projects.vercel.app/",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
