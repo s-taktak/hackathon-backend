@@ -1,4 +1,4 @@
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, case
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
@@ -26,6 +26,14 @@ async def find_category_id(
         )
         .options(
             selectinload(CategoryModel.parent).selectinload(CategoryModel.parent)
+        )
+        .order_by(
+            case(
+                (CategoryModel.name.ilike(keyword), 1),
+                (CategoryModel.name.ilike(f"{keyword}%"), 2),
+                else_=3
+            ),
+            CategoryModel.name
         )
         .limit(10)
     )
