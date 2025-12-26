@@ -21,3 +21,12 @@ async def find_brands(
         .limit(10)
     )
     return result.scalars().all()
+
+async def get_brand_by_id(
+    db: AsyncSession,
+    brand_id: int
+) -> BrandModel:
+    result = await db.execute(
+        select(BrandModel).where(BrandModel.id == brand_id)
+    )
+    return result.scalars().first()

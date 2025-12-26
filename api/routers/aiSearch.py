@@ -215,9 +215,24 @@ async def suggest_attributes(payload: PredictRequest, db: AsyncSession = Depends
 
                 try:
                     data = json.loads(json_str)
+                    
+                    cat_id = data.get("category_id")
+                    br_id = data.get("brand_id")
+                    
+                    cat_path = []
+                    brand_obj = None
+                    
+                    if cat_id:
+                        cat_path = await category_crud.get_category_path(db, cat_id)
+                        
+                    if br_id:
+                        brand_obj = await brand_crud.get_brand_by_id(db, br_id)
+
                     final_response = PredictResponse(
-                        category_id=data.get("category_id"),
-                        brand_id=data.get("brand_id")
+                        category_id=cat_id,
+                        brand_id=br_id,
+                        category_path=cat_path,
+                        brand=brand_obj
                     )
                     print(f"DEBUG: Successfully parsed IDs: {final_response}")
                 except json.JSONDecodeError:

@@ -56,3 +56,27 @@ async def find_category_id(
         })
         
     return output
+
+async def get_category_path(
+    db: AsyncSession,
+    category_id: int
+) -> List[CategoryModel]:
+    result = await db.execute(
+        select(CategoryModel)
+        .where(CategoryModel.id == category_id)
+        .options(
+            selectinload(CategoryModel.parent).selectinload(CategoryModel.parent) # Assuming recursion depth is manageable or using loop
+        )
+    )
+    category = result.scalars().first()
+    
+    if not category:
+        return []
+
+    path = []
+    curr = category
+    while curr:
+        path.insert(0, curr)
+        curr = curr.parent
+        
+    return path
